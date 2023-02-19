@@ -1,0 +1,59 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  pre_job:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      paths_result: ${{ steps.skip_check.outputs.paths_result }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          skip_after_successful_duplicate: 'true'
+          do_not_skip: '["push"]'
+          paths_ignore: '["README.md", "LICENSE", ".gitignore", ".github/**", ".rustfmt.toml"]'
+          paths_filter: |
+            build:
+              paths:
+                - Cargo.toml
+                - Cargo.lock
+                - src/**
+                - tests/**
+  build:
+    needs: pre_job
+    if: needs.pre_job.outputs.should_skip != 'true' || !fromJSON(needs.pre_job.outputs.paths_result).build.should_skip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: install toolchain
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - name: install tools
+        run: |
+          rustup component add clippy
+          rustup component add rustfmt
+          cargo install cargo-audit
+      - name: cargo check --verbose
+        run: cargo check --verbose
+      - name: cargo fmt --verbose -- --check
+        run: cargo fmt --verbose -- --check
+      - name: cargo clippy --verbose -- -A dead-code
+        run: cargo clippy --verbose -- -A dead-code
+      - name: cargo audit
+        run: cargo audit
+      - name: cargo build --verbose
+        run: cargo build --verbose
+      - name: cargo doc --verbose
+        run: cargo doc --verbose
+      - name: cargo test --verbose
+        run: cargo test --verbose
