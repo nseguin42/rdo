@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use petgraph::graph::{DefaultIx, DiGraph, NodeIndex};
-use petgraph::prelude::{Dfs};
+use petgraph::prelude::Dfs;
 use petgraph::visit::{Topo, Walker};
 
 use crate::error::Error;
@@ -111,9 +111,12 @@ where
         Ok(())
     }
 
-    pub fn get_transitive_closure(&self, nodes: Vec<NodeIndex>) -> Vec<NodeIndex> {
+    /// Perform a depth first search on each node individually, reusing the visit
+    /// map for each node.
+    fn get_transitive_closure(&self, nodes: Vec<NodeIndex>) -> Vec<NodeIndex> {
         let mut nodes_mut = nodes;
         let mut closure: Vec<NodeIndex> = Vec::new();
+
         let first = nodes_mut.pop().unwrap();
         let mut dfs = Dfs::new(&self.graph, first);
         while let Some(nx) = dfs.next(&self.graph) {
@@ -121,6 +124,8 @@ where
         }
 
         while let Some(_nx) = nodes_mut.pop() {
+            closure.push(_nx);
+            dfs.move_to(_nx);
             while let Some(nx) = dfs.next(&self.graph) {
                 closure.push(nx);
             }
