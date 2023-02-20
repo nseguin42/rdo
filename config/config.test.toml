@@ -1,0 +1,29 @@
+[log]
+level = "debug"
+
+[script.test]
+path = "scripts/test.sh"
+type = "Bash"
+args = ["world"]
+enabled = true
+
+[script.test2]
+path = "scripts/test.sh"
+type = "Bash"
+args = ["there"]
+dependencies = ["test"]
+enabled = true
+
+[script.test3]
+path = "scripts/test.sh"
+type = "Bash"
+args = ["world... again"]
+dependencies = ["test", "test2"]
+enabled = true
+
+[script.test4]
+cmd = "echo Goodbye, $1!"
+type = "Bash"
+args = ["friend"]
+enabled = true
+dependencies = ["test3"]
