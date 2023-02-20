@@ -5,6 +5,8 @@ pub enum Error {
     Config(config::ConfigError),
     Conversion(String),
     Task(String),
+    TaskDependencyNotRun(String, String),
+    TaskNotFound(String),
     Unspecified(String),
 }
 
@@ -59,6 +61,10 @@ impl std::fmt::Display for Error {
             Error::Conversion(err) => write!(f, "Conversion error: {}", err),
             Error::Unspecified(err) => write!(f, "Unspecified error: {}", err),
             Error::Task(err) => write!(f, "Task error: {}", err),
+            Error::TaskDependencyNotRun(task, dep) => {
+                write!(f, "Dependency of {} not run: {}", task, dep)
+            }
+            Error::TaskNotFound(task) => write!(f, "Task not found: {}", task),
         }
     }
 }
