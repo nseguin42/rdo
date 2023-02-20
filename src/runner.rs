@@ -6,7 +6,7 @@ use petgraph::visit::{Topo, Walker};
 
 use crate::error::Error;
 use crate::runnable::Runnable;
-use crate::task::{Task, TaskDependency, TaskId};
+use crate::task::{Task, TaskDependency};
 
 pub struct TaskRunner<'a, F>
 where
@@ -163,14 +163,6 @@ where
         }
 
         Ok(transitive_closure)
-    }
-
-    fn get_task_by_id(&self, task_id: TaskId) -> Result<Task<F>, Error> {
-        let task = self.tasks.iter().find(|task| task.id == task_id).cloned();
-        match task {
-            Some(task) => Ok(task),
-            None => Err(Error::TaskNotFound(task_id.0.to_string())),
-        }
     }
 
     pub fn get_task_by_name(&self, task_name: String) -> Result<&Task<F>, Error> {
