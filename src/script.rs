@@ -3,7 +3,7 @@ use std::process::Command;
 
 use config::Config;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
 
 use crate::error::Error;
 use crate::runnable::Runnable;
