@@ -192,6 +192,36 @@ where
     }
 }
 
+pub trait WithDependencies: Runnable {
+    fn get_dependencies(&self) -> Vec<String>;
+}
+
+impl<'a, F> TaskRunner<'a, F>
+where
+    F: WithDependencies + Clone,
+{
+    pub fn new_with_dependencies(tasks: Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
+        let mut task_runner = Self::new(tasks);
+        let task_names = task_runner
+            .tasks
+            .iter()
+            .map(|task| task.name.clone())
+            .collect::<Vec<_>>();
+
+        for task_name in task_names {
+            let task = task_runner.get_task_by_name(task_name.clone()).unwrap();
+            let dependencies = task.runnable.get_dependencies();
+            for dependency_name in dependencies {
+                task_runner
+                    .add_dependency_by_name(task_name.clone(), dependency_name)
+                    .unwrap();
+            }
+        }
+
+        task_runner
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -227,35 +257,5 @@ mod tests {
             .add_dependency(&task_5, &task_6);
 
         task_runner.run_all().unwrap();
-    }
-}
-
-pub trait WithDependencies: Runnable {
-    fn get_dependencies(&self) -> Vec<String>;
-}
-
-impl<'a, F> TaskRunner<'a, F>
-where
-    F: WithDependencies + Clone,
-{
-    pub fn new_with_dependencies(tasks: Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
-        let mut task_runner = Self::new(tasks);
-        let task_names = task_runner
-            .tasks
-            .iter()
-            .map(|task| task.name.clone())
-            .collect::<Vec<_>>();
-
-        for task_name in task_names {
-            let task = task_runner.get_task_by_name(task_name.clone()).unwrap();
-            let dependencies = task.runnable.get_dependencies();
-            for dependency_name in dependencies {
-                task_runner
-                    .add_dependency_by_name(task_name.clone(), dependency_name)
-                    .unwrap();
-            }
-        }
-
-        task_runner
     }
 }
