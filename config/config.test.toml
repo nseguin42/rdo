@@ -22,8 +22,8 @@ dependencies = ["test", "test2"]
 enabled = true
 
 [script.test4]
-cmd = "echo goodbye $1"
+cmd = "echo Goodbye, $1!"
 type = "Bash"
-args = ["world"]
+args = ["friend"]
 enabled = true
 dependencies = ["test3"]

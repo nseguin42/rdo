@@ -1,4 +1,4 @@
-use std::env::args;
+
 use std::io::Read;
 use std::os::unix::prelude::PermissionsExt;
 use std::process::Command;
@@ -37,7 +37,7 @@ impl Script {
         dependencies: Vec<String>,
         enabled: bool,
     ) -> Script {
-        if (path.is_none() && cmd.is_none()) || (!path.is_none() && !cmd.is_none()) {
+        if (path.is_none() && cmd.is_none()) || (path.is_some() && cmd.is_some()) {
             panic!("Exactly one of path, cmd must be set");
         }
 
@@ -54,11 +54,11 @@ impl Script {
             );
 
             if !is_file(&path) {
-                panic!("{} is not a file", path.clone().unwrap());
+                panic!("{} is not a file", path.unwrap());
             }
 
             if !is_executable(&path) {
-                panic!("{} is not executable", path.clone().unwrap());
+                panic!("{} is not executable", path.unwrap());
             }
 
             cmd = load_script_file(&path).unwrap();
