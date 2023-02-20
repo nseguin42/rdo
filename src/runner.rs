@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::ops::Deref;
 
 use petgraph::graph::{DefaultIx, DiGraph, NodeIndex};
-use petgraph::prelude::{Dfs, DfsPostOrder};
+use petgraph::prelude::DfsPostOrder;
 use petgraph::visit::{Topo, Walker};
 
 use crate::error::Error;
@@ -208,9 +208,6 @@ mod tests {
             .add_dependencies(&task_4, vec![&task_2, &task_5, &task_6])
             .add_dependency(&task_5, &task_6);
 
-        dbg!(&task_runner.tasks);
-
         task_runner.run_all().unwrap();
-        dbg!(&task_runner.get_run_order(vec![&task_5]).unwrap());
     }
 }
