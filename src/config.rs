@@ -2,6 +2,7 @@ use config::Config;
 
 use crate::error::Error;
 
+#[allow(dead_code)]
 pub enum ConfigType {
     Production,
     Test,
