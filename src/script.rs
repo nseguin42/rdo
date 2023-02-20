@@ -66,9 +66,17 @@ impl Runnable for Script {
             .output()
             .expect("failed to execute process");
 
-        println!("status: {}", output.status);
-        println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+        if output.status.code().unwrap_or(1) != 0 {
+            println!("{}", output.status);
+        }
+
+        if !output.stderr.is_empty() {
+            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+        }
+
+        if !output.stdout.is_empty() {
+            println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+        }
 
         Ok(())
     }
