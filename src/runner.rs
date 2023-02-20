@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use petgraph::graph::{DefaultIx, DiGraph, NodeIndex};
-use petgraph::prelude::DfsPostOrder;
+use petgraph::prelude::{Dfs};
 use petgraph::visit::{Topo, Walker};
 
 use crate::error::Error;
@@ -111,15 +111,33 @@ where
         Ok(())
     }
 
+    pub fn get_transitive_closure(&self, nodes: Vec<NodeIndex>) -> Vec<NodeIndex> {
+        let mut nodes_mut = nodes;
+        let mut closure: Vec<NodeIndex> = Vec::new();
+        let first = nodes_mut.pop().unwrap();
+        let mut dfs = Dfs::new(&self.graph, first);
+        while let Some(nx) = dfs.next(&self.graph) {
+            closure.push(nx);
+        }
+
+        while let Some(_nx) = nodes_mut.pop() {
+            while let Some(nx) = dfs.next(&self.graph) {
+                closure.push(nx);
+            }
+        }
+
+        closure
+    }
+
     pub fn get_run_order(&self, tasks: Vec<&Task<F>>) -> Result<Vec<&Task<F>>, Error> {
         let mut graph = self.graph.clone();
-        let deps = self.get_transitive_closure_range(tasks)?;
-
-        let dep_indices = graph
-            .node_indices()
-            .filter(|index| deps.contains(graph.node_weight(*index).unwrap()))
+        let nodes = tasks
+            .iter()
+            .map(|task| self.get_node_index(task).unwrap())
             .collect::<Vec<_>>();
-        graph.retain_nodes(|_, index| dep_indices.contains(&index));
+
+        let deps = self.get_transitive_closure(nodes);
+        graph.retain_nodes(|_, index| deps.contains(&index));
 
         let mut sorted_tasks = Topo::new(&graph)
             .iter(&graph)
@@ -139,30 +157,6 @@ where
             .collect::<Vec<_>>();
 
         Ok(dependencies)
-    }
-
-    fn get_transitive_closure(&self, task: &Task<F>) -> Result<HashSet<&Task<F>>, Error> {
-        let task_index = self.get_node_index(task).unwrap();
-        let transitive_closure = DfsPostOrder::new(&self.graph, task_index)
-            .iter(&self.graph)
-            .map(|node| *self.graph.node_weight(node).unwrap())
-            .collect::<HashSet<_>>();
-
-        Ok(transitive_closure)
-    }
-
-    fn get_transitive_closure_range(
-        &self,
-        tasks: Vec<&Task<F>>,
-    ) -> Result<HashSet<&Task<F>>, Error> {
-        let mut transitive_closure = HashSet::new();
-
-        for task in tasks {
-            let task_closure = self.get_transitive_closure(task)?;
-            transitive_closure.extend(task_closure);
-        }
-
-        Ok(transitive_closure)
     }
 
     pub fn get_task_by_name(&self, task_name: String) -> Result<&Task<F>, Error> {
