@@ -15,6 +15,9 @@ fn test_run_all_scripts() {
         .map(|script| script.into())
         .collect::<Vec<Task<Script>>>();
 
-    let runner = TaskRunner::new(scripts.iter().collect::<Vec<_>>());
+    // Borrow each script
+    let scripts = scripts.iter().collect::<Vec<_>>();
+
+    let runner = TaskRunner::new_with_dependencies(scripts);
     runner.run_all().unwrap();
 }

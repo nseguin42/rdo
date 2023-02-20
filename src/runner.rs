@@ -13,7 +13,7 @@ pub struct TaskRunner<'a, F>
 where
     F: Runnable + 'a,
 {
-    pub tasks: HashSet<Task<F>>,
+    pub tasks: Vec<Task<F>>,
     graph: DiGraph<&'a TaskId, TaskDependency, DefaultIx>,
 }
 
@@ -34,7 +34,7 @@ where
     }
 
     pub fn add_task(&mut self, task: &'a Task<F>) {
-        self.tasks.insert(task.clone());
+        self.tasks.push(task.clone());
         self.graph.add_node(&task.id);
     }
 
@@ -68,7 +68,7 @@ where
     }
 
     pub fn run_all(&self) -> Result<(), Error> {
-        let tasks = self.tasks.iter().cloned().collect::<Vec<_>>();
+        let tasks = self.tasks.to_vec();
         self.run(tasks.iter().collect())
     }
 
@@ -132,7 +132,7 @@ where
         Ok(tasks)
     }
 
-    pub fn get_dependencies(&self, task: &Task<F>) -> Result<Vec<Task<F>>, Error> {
+    pub fn get_task_dependencies(&self, task: &Task<F>) -> Result<Vec<Task<F>>, Error> {
         let task_index = self.get_node_index(task.id).unwrap();
         let dependencies = self
             .graph
@@ -172,6 +172,47 @@ where
             None => Err(Error::TaskNotFound(task_id.0.to_string())),
         }
     }
+
+    pub fn get_task_by_name(&self, task_name: String) -> Result<&Task<F>, Error> {
+        let task = self
+            .tasks
+            .iter()
+            .find(|task| task.name == task_name)
+            .cloned()
+            .map(|task| Box::leak(Box::new(task)));
+
+        match task {
+            Some(task) => Ok(task),
+            None => Err(Error::TaskNotFound(task_name)),
+        }
+    }
+
+    pub fn add_dependencies_by_names(
+        &mut self,
+        task_name: String,
+        dependencies: Vec<String>,
+    ) -> &mut Self {
+        for dependency in dependencies {
+            self.add_dependency_by_name(task_name.clone(), dependency);
+        }
+
+        self
+    }
+
+    pub fn add_dependency_by_name(
+        &mut self,
+        task_name: String,
+        dependency_name: String,
+    ) -> &mut Self {
+        let task = self.get_task_by_name(task_name).unwrap();
+        let dependency = self.get_task_by_name(dependency_name).unwrap();
+
+        let task_index = self.get_node_index(task.id).unwrap();
+        let dependency_index = self.get_node_index(dependency.id).unwrap();
+        let edge = TaskDependency::new(task, dependency);
+        self.graph.add_edge(task_index, dependency_index, edge);
+        self
+    }
 }
 
 #[cfg(test)]
@@ -209,5 +250,31 @@ mod tests {
             .add_dependency(&task_5, &task_6);
 
         task_runner.run_all().unwrap();
+    }
+}
+
+pub trait WithDependencies: Runnable {
+    fn get_dependencies(&self) -> Vec<String>;
+}
+
+impl<'a, F> TaskRunner<'a, F>
+where
+    F: WithDependencies + Clone,
+{
+    pub fn new_with_dependencies(tasks: Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
+        let mut task_runner = Self::new(tasks);
+        let task_names = task_runner
+            .tasks
+            .iter()
+            .map(|task| task.name.clone())
+            .collect::<Vec<_>>();
+
+        for task_name in task_names {
+            let task = task_runner.get_task_by_name(task_name.clone()).unwrap();
+            let dependencies = task.runnable.get_dependencies();
+            task_runner.add_dependencies_by_names(task_name, dependencies);
+        }
+
+        task_runner
     }
 }

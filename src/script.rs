@@ -1,12 +1,12 @@
-
 use std::os::unix::prelude::PermissionsExt;
 use std::process::Command;
 
-use config::Config;
+use config::{Config};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 use crate::runnable::Runnable;
+use crate::runner::WithDependencies;
 use crate::task::Task;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
@@ -19,11 +19,18 @@ pub struct Script {
     pub name: String,
     pub path: String,
     pub script_type: ScriptType,
-    args: Vec<String>,
+    pub args: Vec<String>,
+    pub dependencies: Vec<String>,
 }
 
 impl Script {
-    pub fn new(name: &str, path: &str, script_type: ScriptType, args: Vec<String>) -> Script {
+    pub fn new(
+        name: &str,
+        path: &str,
+        script_type: ScriptType,
+        args: Vec<String>,
+        dependencies: Vec<String>,
+    ) -> Script {
         let path = std::fs::canonicalize(path)
             .unwrap()
             .to_str()
@@ -43,6 +50,7 @@ impl Script {
             path,
             script_type,
             args,
+            dependencies,
         }
     }
 }
@@ -77,16 +85,24 @@ pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
     let path = config.get_string(&format!("script.{}.path", name))?;
     let script_type = config.get::<ScriptType>(&format!("script.{}.type", name))?;
     let args = config
-        .get_array(&format!("script.{}.args", name))?
+        .get_array(&format!("script.{}.args", name))
+        .unwrap_or_default()
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+
+    let dependencies = config
+        .get_array(&format!("script.{}.dependencies", name))
+        .unwrap_or_default()
         .iter()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 
     debug!(
-        "Loaded script: {} ({}), type: {:?}, args: {:?}",
-        name, path, script_type, args
+        "Loaded script: {} ({}), type: {:?}, args: {:?}, dependencies: {:?}",
+        name, path, script_type, args, dependencies
     );
-    Ok(Script::new(name, &path, script_type, args))
+    Ok(Script::new(name, &path, script_type, args, dependencies))
 }
 
 pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
@@ -100,5 +116,11 @@ pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
 impl From<Script> for Task<Script> {
     fn from(script: Script) -> Self {
         Task::new(&script.name, script.clone())
+    }
+}
+
+impl WithDependencies for Script {
+    fn get_dependencies(&self) -> Vec<String> {
+        self.dependencies.clone()
     }
 }

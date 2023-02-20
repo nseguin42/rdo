@@ -10,3 +10,10 @@ args = ["world"]
 path = "scripts/test.sh"
 type = "Bash"
 args = ["there"]
+dependencies = ["test"]
+
+[script.test3]
+path = "scripts/test.sh"
+type = "Bash"
+args = ["world... again"]
+dependencies = ["test", "test2"]
