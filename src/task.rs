@@ -18,23 +18,25 @@ where
     pub id: TaskId,
     pub name: String,
     pub runnable: F,
+    pub enabled: bool,
 }
 
 impl<F> Task<F>
 where
     F: Runnable,
 {
-    pub fn new(name: &str, runnable: F) -> Task<F> {
+    pub fn new(name: &str, runnable: F, enabled: bool) -> Task<F> {
         Task {
             id: TaskId(Uuid::new_v4()),
             name: name.to_string(),
             runnable,
+            enabled,
         }
     }
 
-    pub fn run(&self, tasks_run: &mut HashSet<TaskId>) -> Result<(), Error> {
+    pub fn run<'a>(&'a self, tasks_run: &mut HashSet<&'a Task<F>>) -> Result<(), Error> {
         self.runnable.run()?;
-        tasks_run.insert(self.id);
+        tasks_run.insert(self);
         Ok(())
     }
 }

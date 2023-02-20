@@ -1,7 +1,7 @@
 use std::os::unix::prelude::PermissionsExt;
 use std::process::Command;
 
-use config::{Config};
+use config::Config;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
@@ -21,6 +21,7 @@ pub struct Script {
     pub script_type: ScriptType,
     pub args: Vec<String>,
     pub dependencies: Vec<String>,
+    pub enabled: bool,
 }
 
 impl Script {
@@ -30,6 +31,7 @@ impl Script {
         script_type: ScriptType,
         args: Vec<String>,
         dependencies: Vec<String>,
+        enabled: bool,
     ) -> Script {
         let path = std::fs::canonicalize(path)
             .unwrap()
@@ -51,6 +53,7 @@ impl Script {
             script_type,
             args,
             dependencies,
+            enabled,
         }
     }
 }
@@ -98,11 +101,22 @@ pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 
+    let enabled = config
+        .get_bool(&format!("script.{}.enabled", name))
+        .unwrap_or_default();
+
     debug!(
         "Loaded script: {} ({}), type: {:?}, args: {:?}, dependencies: {:?}",
         name, path, script_type, args, dependencies
     );
-    Ok(Script::new(name, &path, script_type, args, dependencies))
+    Ok(Script::new(
+        name,
+        &path,
+        script_type,
+        args,
+        dependencies,
+        enabled,
+    ))
 }
 
 pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
@@ -115,7 +129,7 @@ pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
 
 impl From<Script> for Task<Script> {
     fn from(script: Script) -> Self {
-        Task::new(&script.name, script.clone())
+        Task::new(&script.name, script.clone(), script.enabled)
     }
 }
 

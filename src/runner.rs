@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::ops::Deref;
 
 use petgraph::graph::{DefaultIx, DiGraph, NodeIndex};
 use petgraph::prelude::DfsPostOrder;
@@ -13,8 +12,8 @@ pub struct TaskRunner<'a, F>
 where
     F: Runnable + 'a,
 {
-    pub tasks: Vec<Task<F>>,
-    graph: DiGraph<&'a TaskId, TaskDependency, DefaultIx>,
+    pub tasks: HashSet<Task<F>>,
+    graph: DiGraph<&'a Task<F>, TaskDependency, DefaultIx>,
 }
 
 impl<'a, F> TaskRunner<'a, F>
@@ -24,7 +23,7 @@ where
     pub fn new(tasks: Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
         let mut graph = DiGraph::new();
         for task in tasks.iter() {
-            graph.add_node(&task.id);
+            graph.add_node(*task);
         }
 
         TaskRunner {
@@ -34,8 +33,8 @@ where
     }
 
     pub fn add_task(&mut self, task: &'a Task<F>) {
-        self.tasks.push(task.clone());
-        self.graph.add_node(&task.id);
+        self.tasks.insert(task.clone());
+        self.graph.add_node(task);
     }
 
     pub fn add_tasks(&mut self, tasks: Vec<&'a Task<F>>) {
@@ -45,17 +44,17 @@ where
     }
 
     pub fn add_dependency(&mut self, task: &Task<F>, dependency: &Task<F>) -> &mut Self {
-        let task_index = self.get_node_index(task.id).unwrap();
-        let dependency_index = self.get_node_index(dependency.id).unwrap();
+        let task_index = self.get_node_index(task).unwrap();
+        let dependency_index = self.get_node_index(dependency).unwrap();
         let edge = TaskDependency::new(task, dependency);
         self.graph.add_edge(task_index, dependency_index, edge);
         self
     }
 
-    fn get_node_index(&self, task_id: TaskId) -> Option<NodeIndex> {
+    fn get_node_index(&self, task: &Task<F>) -> Option<NodeIndex> {
         self.graph.node_indices().find(|index| {
-            let node = self.graph.node_weight(*index).unwrap();
-            **node == task_id
+            let &node = self.graph.node_weight(*index).unwrap();
+            node == task
         })
     }
 
@@ -68,32 +67,42 @@ where
     }
 
     pub fn run_all(&self) -> Result<(), Error> {
-        let tasks = self.tasks.to_vec();
-        self.run(tasks.iter().collect())
+        let tasks = self.tasks.iter().filter(|t| t.enabled);
+        self.run(tasks.into_iter().collect())
     }
 
-    fn try_run(&self, task_id: TaskId, tasks_run: &mut HashSet<TaskId>) -> Result<(), Error> {
+    fn try_run<'b>(
+        &'b self,
+        task: &Task<F>,
+        tasks_run: &mut HashSet<&'b Task<F>>,
+    ) -> Result<(), Error> {
         let dependencies = self
             .graph
-            .neighbors_directed(self.get_node_index(task_id).unwrap(), petgraph::Outgoing);
+            .neighbors_directed(self.get_node_index(task).unwrap(), petgraph::Outgoing);
 
         for dependency in dependencies {
             let dependency = self.graph.node_weight(dependency).unwrap();
             if !tasks_run.contains(dependency) {
                 return Err(Error::TaskDependencyNotRun(
-                    task_id.0.to_string(),
-                    dependency.0.to_string(),
+                    task.name.clone(),
+                    dependency.name.clone(),
                 ));
             }
         }
 
-        let task = self.tasks.iter().find(|task| task.id == task_id).unwrap();
+        let task = self.tasks.iter().find(|t| *t == task).unwrap();
+
+        if !task.enabled {
+            return Err(Error::Task("Task is disabled".to_string()));
+        }
+
         task.run(tasks_run)?;
         Ok(())
     }
 
     pub fn run(&self, tasks: Vec<&Task<F>>) -> Result<(), Error> {
-        let tasks_to_run = self.get_run_order_ids(tasks)?;
+        let tasks_to_run = self.get_run_order(tasks)?.into_iter().filter(|t| t.enabled);
+
         let mut tasks_run = HashSet::new();
         for task in tasks_to_run {
             self.try_run(task, &mut tasks_run)?;
@@ -102,7 +111,7 @@ where
         Ok(())
     }
 
-    fn get_run_order_ids(&self, tasks: Vec<&Task<F>>) -> Result<Vec<TaskId>, Error> {
+    pub fn get_run_order(&self, tasks: Vec<&Task<F>>) -> Result<Vec<&Task<F>>, Error> {
         let mut graph = self.graph.clone();
         let deps = self.get_transitive_closure_range(tasks)?;
 
@@ -114,47 +123,38 @@ where
 
         let mut sorted_tasks = Topo::new(&graph)
             .iter(&graph)
-            .map(|node| *graph.node_weight(node).unwrap().deref())
+            .map(|node| *graph.node_weight(node).unwrap())
             .collect::<Vec<_>>();
 
         sorted_tasks.reverse();
 
         Ok(sorted_tasks)
     }
-
-    pub fn get_run_order(&self, tasks: Vec<&Task<F>>) -> Result<Vec<Task<F>>, Error> {
-        let task_ids = self.get_run_order_ids(tasks)?;
-        let tasks = task_ids
-            .iter()
-            .map(|task_id| self.get_task_by_id(*task_id).unwrap())
-            .collect::<Vec<_>>();
-
-        Ok(tasks)
-    }
-
-    pub fn get_task_dependencies(&self, task: &Task<F>) -> Result<Vec<Task<F>>, Error> {
-        let task_index = self.get_node_index(task.id).unwrap();
+    pub fn get_task_dependencies(&self, task: &Task<F>) -> Result<Vec<&Task<F>>, Error> {
+        let task_index = self.get_node_index(task).unwrap();
         let dependencies = self
             .graph
             .neighbors_directed(task_index, petgraph::Direction::Outgoing)
-            .map(|node| *self.graph.node_weight(node).unwrap().deref())
-            .map(|task_id| self.get_task_by_id(task_id).unwrap())
+            .map(|node| *self.graph.node_weight(node).unwrap())
             .collect::<Vec<_>>();
 
         Ok(dependencies)
     }
 
-    fn get_transitive_closure(&self, task: &Task<F>) -> Result<HashSet<TaskId>, Error> {
-        let task_index = self.get_node_index(task.id).unwrap();
+    fn get_transitive_closure(&self, task: &Task<F>) -> Result<HashSet<&Task<F>>, Error> {
+        let task_index = self.get_node_index(task).unwrap();
         let transitive_closure = DfsPostOrder::new(&self.graph, task_index)
             .iter(&self.graph)
-            .map(|node| *self.graph.node_weight(node).unwrap().deref())
+            .map(|node| *self.graph.node_weight(node).unwrap())
             .collect::<HashSet<_>>();
 
         Ok(transitive_closure)
     }
 
-    fn get_transitive_closure_range(&self, tasks: Vec<&Task<F>>) -> Result<HashSet<TaskId>, Error> {
+    fn get_transitive_closure_range(
+        &self,
+        tasks: Vec<&Task<F>>,
+    ) -> Result<HashSet<&Task<F>>, Error> {
         let mut transitive_closure = HashSet::new();
 
         for task in tasks {
@@ -187,31 +187,16 @@ where
         }
     }
 
-    pub fn add_dependencies_by_names(
-        &mut self,
-        task_name: String,
-        dependencies: Vec<String>,
-    ) -> &mut Self {
-        for dependency in dependencies {
-            self.add_dependency_by_name(task_name.clone(), dependency);
-        }
-
-        self
-    }
-
     pub fn add_dependency_by_name(
         &mut self,
         task_name: String,
         dependency_name: String,
-    ) -> &mut Self {
-        let task = self.get_task_by_name(task_name).unwrap();
-        let dependency = self.get_task_by_name(dependency_name).unwrap();
+    ) -> Result<(), Error> {
+        let task = self.get_task_by_name(task_name)?.clone();
+        let dependency = self.get_task_by_name(dependency_name)?.clone();
+        self.add_dependency(&task, &dependency);
 
-        let task_index = self.get_node_index(task.id).unwrap();
-        let dependency_index = self.get_node_index(dependency.id).unwrap();
-        let edge = TaskDependency::new(task, dependency);
-        self.graph.add_edge(task_index, dependency_index, edge);
-        self
+        Ok(())
     }
 }
 
@@ -230,7 +215,7 @@ mod tests {
                 Ok(())
             };
 
-            Task::new(name, runnable)
+            Task::new(name, runnable, true)
         };
 
         let task_1 = task_factory("Task 1");
@@ -272,7 +257,11 @@ where
         for task_name in task_names {
             let task = task_runner.get_task_by_name(task_name.clone()).unwrap();
             let dependencies = task.runnable.get_dependencies();
-            task_runner.add_dependencies_by_names(task_name, dependencies);
+            for dependency_name in dependencies {
+                task_runner
+                    .add_dependency_by_name(task_name.clone(), dependency_name)
+                    .unwrap();
+            }
         }
 
         task_runner

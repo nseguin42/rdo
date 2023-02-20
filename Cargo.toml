@@ -15,4 +15,3 @@ uuid = { version = "1.3.0", features = ["serde", "v4"] }
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "user-hooks"] }
-clippy = "0.0.302"
