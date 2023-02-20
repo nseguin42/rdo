@@ -1,3 +1,5 @@
+use std::env::args;
+use std::io::Read;
 use std::os::unix::prelude::PermissionsExt;
 use std::process::Command;
 
@@ -17,7 +19,8 @@ pub enum ScriptType {
 #[derive(Debug, Clone)]
 pub struct Script {
     pub name: String,
-    pub path: String,
+    pub cmd: String,
+    pub path: Option<String>,
     pub script_type: ScriptType,
     pub args: Vec<String>,
     pub dependencies: Vec<String>,
@@ -27,28 +30,43 @@ pub struct Script {
 impl Script {
     pub fn new(
         name: &str,
-        path: &str,
+        cmd: Option<String>,
+        path: Option<String>,
         script_type: ScriptType,
         args: Vec<String>,
         dependencies: Vec<String>,
         enabled: bool,
     ) -> Script {
-        let path = std::fs::canonicalize(path)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string();
-
-        if !is_file(&path) {
-            panic!("{} is not a file", path);
+        if (path.is_none() && cmd.is_none()) || (!path.is_none() && !cmd.is_none()) {
+            panic!("Exactly one of path, cmd must be set");
         }
 
-        if !is_executable(&path) {
-            panic!("{} is not executable", path);
+        let mut cmd = cmd.unwrap_or_default();
+        let mut path = path;
+
+        if path.is_some() {
+            path = Option::from(
+                std::fs::canonicalize(path.clone().unwrap())
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            );
+
+            if !is_file(&path) {
+                panic!("{} is not a file", path.clone().unwrap());
+            }
+
+            if !is_executable(&path) {
+                panic!("{} is not executable", path.clone().unwrap());
+            }
+
+            cmd = load_script_file(&path).unwrap();
         }
 
         Script {
             name: name.to_string(),
+            cmd,
             path,
             script_type,
             args,
@@ -58,10 +76,19 @@ impl Script {
     }
 }
 
+fn load_script_file(path: &Option<String>) -> Result<String, Error> {
+    let mut file = std::fs::File::open(path.clone().unwrap())?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
+}
+
 impl Runnable for Script {
     fn run(&self) -> Result<(), Error> {
         let output = Command::new("bash")
-            .arg(&self.path)
+            .arg("-c")
+            .arg(&self.cmd)
+            .arg("--")
             .args(&self.args)
             .output()
             .expect("failed to execute process");
@@ -82,18 +109,23 @@ impl Runnable for Script {
     }
 }
 
-fn is_file(path: &str) -> bool {
-    std::path::Path::new(path).is_file()
+fn is_file(path: &Option<String>) -> bool {
+    std::path::Path::new(path.as_ref().unwrap()).is_file()
 }
 
-fn is_executable(path: &str) -> bool {
-    std::fs::metadata(path)
+fn is_executable(path: &Option<String>) -> bool {
+    std::fs::metadata(path.as_ref().unwrap())
         .map(|m| m.permissions().mode() & 0o111 != 0)
         .unwrap_or(false)
 }
 
 pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
-    let path = config.get_string(&format!("script.{}.path", name))?;
+    let path = config
+        .get::<Option<String>>(&format!("script.{}.path", name))
+        .unwrap_or_default();
+    let cmd = config
+        .get::<Option<String>>(&format!("script.{}.cmd", name))
+        .unwrap_or_default();
     let script_type = config.get::<ScriptType>(&format!("script.{}.type", name))?;
     let args = config
         .get_array(&format!("script.{}.args", name))
@@ -115,11 +147,16 @@ pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
 
     debug!(
         "Loaded script: {} ({}), type: {:?}, args: {:?}, dependencies: {:?}",
-        name, path, script_type, args, dependencies
+        name,
+        &path.clone().unwrap_or_default(),
+        script_type,
+        args,
+        dependencies
     );
     Ok(Script::new(
         name,
-        &path,
+        cmd,
+        path,
         script_type,
         args,
         dependencies,

@@ -194,6 +194,7 @@ where
         for task_name in task_names {
             let task = task_runner.get_task_by_name(task_name.clone()).unwrap();
             let dependencies = task.runnable.get_dependencies();
+            dbg!(task_name.clone(), dependencies.clone());
             for dependency_name in dependencies {
                 task_runner
                     .add_dependency_by_name(task_name.clone(), dependency_name)
