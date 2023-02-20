@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate log;
 
+use crate::config::{get_config, ConfigType};
 use crate::logger::setup_logger;
 
 pub(crate) mod config;
@@ -9,9 +10,10 @@ pub(crate) mod logger;
 pub(crate) mod runnable;
 
 pub mod runner;
+pub mod script;
 pub mod task;
 
 fn main() {
-    let config = config::get_config(config::ConfigType::Production).unwrap();
-    setup_logger(config);
+    let config = get_config(ConfigType::Production).unwrap();
+    setup_logger(&config);
 }

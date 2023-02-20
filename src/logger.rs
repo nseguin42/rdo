@@ -1,10 +1,7 @@
-
-
 use config::Config;
+use pretty_env_logger::formatted_builder;
 
-use pretty_env_logger::{formatted_builder};
-
-pub fn setup_logger(config: Config) {
+pub fn setup_logger(config: &Config) {
     let log_level = config.get_string("log.level");
 
     formatted_builder()
@@ -23,6 +20,6 @@ mod tests {
     #[test]
     fn test_setup_logger() {
         let config = get_config(ConfigType::Test).unwrap();
-        setup_logger(config);
+        setup_logger(&config);
     }
 }

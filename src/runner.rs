@@ -21,7 +21,7 @@ impl<'a, F> TaskRunner<'a, F>
 where
     F: Runnable + Clone,
 {
-    pub fn new(tasks: std::vec::Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
+    pub fn new(tasks: Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
         let mut graph = DiGraph::new();
         for task in tasks.iter() {
             graph.add_node(&task.id);
