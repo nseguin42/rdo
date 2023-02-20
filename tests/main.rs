@@ -6,7 +6,7 @@ use rdo::task::Task;
 
 #[test]
 fn test_run_all_scripts() {
-    let config = get_config(ConfigType::Production).unwrap();
+    let config = get_config(ConfigType::Test).unwrap();
     setup_logger(&config);
 
     let scripts = load_all_from_config(&config)
