@@ -1,9 +1,9 @@
+use std::env::args;
 use std::os::unix::prelude::PermissionsExt;
 use std::process::Command;
 
 use config::Config;
 use serde::{Deserialize, Serialize};
-
 
 use crate::error::Error;
 use crate::runnable::Runnable;
@@ -19,10 +19,11 @@ pub struct Script {
     pub name: String,
     pub path: String,
     pub script_type: ScriptType,
+    args: Vec<String>,
 }
 
 impl Script {
-    pub fn new(name: &str, path: &str, script_type: ScriptType) -> Script {
+    pub fn new(name: &str, path: &str, script_type: ScriptType, args: Vec<String>) -> Script {
         let path = std::fs::canonicalize(path)
             .unwrap()
             .to_str()
@@ -41,6 +42,7 @@ impl Script {
             name: name.to_string(),
             path,
             script_type,
+            args,
         }
     }
 }
@@ -49,6 +51,7 @@ impl Runnable for Script {
     fn run(&self) -> Result<(), Error> {
         let output = Command::new("bash")
             .arg(&self.path)
+            .args(&self.args)
             .output()
             .expect("failed to execute process");
 
@@ -71,11 +74,19 @@ fn is_executable(path: &str) -> bool {
 }
 
 pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
-    let path_key = format!("script.{}.path", name);
-    let script_type_key = format!("script.{}.type", name);
-    let path = config.get_string(&path_key)?;
-    let script_type = config.get::<ScriptType>(&script_type_key)?;
-    Ok(Script::new(name, &path, script_type))
+    let path = config.get_string(&format!("script.{}.path", name))?;
+    let script_type = config.get::<ScriptType>(&format!("script.{}.type", name))?;
+    let args = config
+        .get_array(&format!("script.{}.args", name))?
+        .iter()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
+
+    debug!(
+        "Loaded script: {} ({}), type: {:?}, args: {:?}",
+        name, path, script_type, args
+    );
+    Ok(Script::new(name, &path, script_type, args))
 }
 
 pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
