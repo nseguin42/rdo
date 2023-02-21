@@ -36,6 +36,7 @@ where
     }
 
     fn run_one_unchecked<'b>(&'b self, task: &'b Task<F>) -> Result<(), Error> {
+        debug!("Running task: {}", task.name);
         task.run()?;
         Ok(())
     }
