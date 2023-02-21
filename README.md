@@ -50,16 +50,21 @@ args = ["test_6", "Run anytime."]
 type = "Bash"
 ```
 
-### Output
+### Script: `scripts/test.sh`
+
+```bash
+#!/bin/bash
+echo "$1 | $2"
+```
+
+### Output: `cargo run`
 
 ```
-$ cargo run
-
- INFO  rdo::logger > Logger initialized
- INFO  rdo::script > stdout: test_6 | Run anytime.
- INFO  rdo::script > stdout: test_5 | Run after test_6.
- INFO  rdo::script > stdout: test_4 | Run after test_5 and test_6.
- INFO  rdo::script > stdout: test_2 | Run after test_6.
- INFO  rdo::script > stdout: test_3 | Run after test_2.
- INFO  rdo::script > stdout: test_1 | Run after all other tests.
+INFO rdo::logger > Logger initialized
+INFO rdo::script > stdout: test_6 | Run anytime.
+INFO rdo::script > stdout: test_5 | Run after test_6.
+INFO rdo::script > stdout: test_4 | Run after test_5 and test_6.
+INFO rdo::script > stdout: test_2 | Run after test_6.
+INFO rdo::script > stdout: test_3 | Run after test_2.
+INFO rdo::script > stdout: test_1 | Run after all other tests.
 ```
