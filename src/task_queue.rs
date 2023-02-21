@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt::Debug;
 use std::hash::Hash;
 
 use petgraph::graph::DiGraph;
@@ -41,7 +42,7 @@ where
 impl<'a, T, K> GraphBinding<'a, T, K>
 where
     T: GraphLike<'a, K> + PartialEq + Eq + 'a,
-    K: PartialEq + Eq + Hash,
+    K: PartialEq + Eq + Hash + Debug,
 {
     pub fn new(nodes: Vec<&'a T>) -> GraphBinding<'a, T, K> {
         let graph = DiGraph::new();
@@ -67,6 +68,7 @@ where
         for node in nodes {
             let node_id = self.key_to_id.get(node.get_key()).unwrap();
             for child_key in node.get_children_keys() {
+                dbg!(&child_key);
                 let child_id = self.key_to_id.get(child_key).unwrap();
                 self.graph.add_edge(*child_id, *node_id, ());
             }

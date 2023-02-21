@@ -1,29 +1,37 @@
 [log]
 level = "debug"
 
-[script.test]
+[script.test_1]
 path = "scripts/test.sh"
+args = ["test_1", "Run after all other tests."]
 type = "Bash"
-args = ["world"]
-enabled = true
+dependencies = ["test_2", "test_3", "test_4", "test_5", "test_6"]
 
-[script.test2]
+[script.test_2]
 path = "scripts/test.sh"
+args = ["test_2", "Run after test_6."]
 type = "Bash"
-args = ["there"]
-dependencies = ["test"]
-enabled = true
+dependencies = ["test_6"]
 
-[script.test3]
+[script.test_3]
 path = "scripts/test.sh"
+args = ["test_3", "Run after test_2."]
 type = "Bash"
-args = ["world... again"]
-dependencies = ["test", "test2"]
-enabled = true
+dependencies = ["test_2"]
 
-[script.test4]
-cmd = "echo Goodbye, $1!"
+[script.test_4]
+path = "scripts/test.sh"
+args = ["test_4", "Run after test_5 and test_6."]
 type = "Bash"
-args = ["friend"]
-enabled = true
-dependencies = ["test3"]
+dependencies = ["test_5", "test_6"]
+
+[script.test_5]
+path = "scripts/test.sh"
+args = ["test_5", "Run after test_6."]
+type = "Bash"
+dependencies = ["test_6"]
+
+[script.test_6]
+path = "scripts/test.sh"
+args = ["test_6", "Run anytime."]
+type = "Bash"
