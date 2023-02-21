@@ -68,3 +68,20 @@ INFO rdo::script > stdout: test_2 | Run after test_6.
 INFO rdo::script > stdout: test_3 | Run after test_2.
 INFO rdo::script > stdout: test_1 | Run after all other tests.
 ```
+
+## TODO
+
+- [ ] Improve console output / human-friendliness
+- [ ] Improve error handling
+- [ ] Add support for more script types
+- [ ] Add script templates / connectors
+    - Package update script
+    - With retries
+    - With timeout
+- [ ] Add interactive console with streaming output
+- [ ] Add support for running scripts in parallel
+- [ ] Add more complex dependency logic
+    - `IF` / `ELSE` / `AND` / `OR` / `NOT` syntax
+    - "Necessary" and "sufficient" syntax
+- [ ] Post execution summary
+- [ ] Interruptible execution
