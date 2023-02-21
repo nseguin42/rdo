@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use crate::error::Error;
 use crate::runnable::Runnable;
@@ -64,5 +64,14 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Task").field("name", &self.name).finish()
+    }
+}
+
+impl<F> Display for Task<F>
+where
+    F: Runnable,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Task: {}", self.name)
     }
 }
