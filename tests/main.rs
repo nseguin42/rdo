@@ -18,6 +18,6 @@ fn test_run_all_scripts() {
     // Borrow each script
     let scripts = scripts.iter().collect::<Vec<_>>();
 
-    let runner = TaskRunner::new(scripts);
+    let runner = TaskRunner::new(scripts).unwrap();
     runner.run_all().unwrap();
 }

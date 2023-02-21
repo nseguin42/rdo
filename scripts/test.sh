@@ -1,2 +1,6 @@
 #!/bin/bash
-echo "Hello, ${1}!"
+if [ -z "$2" ]; then
+    echo "$1"
+else
+  echo "$1 | $2"
+fi

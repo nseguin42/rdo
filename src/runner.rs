@@ -14,13 +14,13 @@ impl<'a, F> TaskRunner<'a, F>
 where
     F: Runnable + Clone,
 {
-    pub fn new(tasks: Vec<&'a Task<F>>) -> TaskRunner<'a, F> {
-        let graph_binding = GraphBinding::new(tasks);
-        TaskRunner { graph_binding }
+    pub fn new(tasks: Vec<&'a Task<F>>) -> Result<TaskRunner<'a, F>, Error> {
+        let graph_binding = GraphBinding::new(tasks)?;
+        Ok(TaskRunner { graph_binding })
     }
 
     pub fn run(&self, tasks: Vec<&Task<F>>) -> Result<(), Error> {
-        let sorted_tasks = self.get_run_order(tasks);
+        let sorted_tasks = self.get_run_order(tasks)?;
         for task in sorted_tasks {
             self.run_one_unchecked(task)?;
         }
@@ -31,8 +31,11 @@ where
         self.run(self.graph_binding.get_all_nodes())
     }
 
-    pub fn get_run_order(&'a self, tasks: Vec<&'a Task<F>>) -> impl Iterator<Item = &'a Task<F>> {
-        self.graph_binding.topological_sort(tasks)
+    pub fn get_run_order(
+        &'a self,
+        tasks: Vec<&'a Task<F>>,
+    ) -> Result<impl Iterator<Item = &'a Task<F>>, Error> {
+        Ok(self.graph_binding.topological_sort(tasks))
     }
 
     fn run_one_unchecked<'b>(&'b self, task: &'b Task<F>) -> Result<(), Error> {
@@ -74,7 +77,7 @@ mod tests {
 
         let tasks = vec![&task_1, &task_2, &task_3, &task_4, &task_5, &task_6];
 
-        let task_runner = TaskRunner::new(tasks);
+        let task_runner = TaskRunner::new(tasks).unwrap();
         task_runner.run_all().unwrap();
     }
 }
