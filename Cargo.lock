@@ -399,6 +399,7 @@ version = "0.1.1"
 dependencies = [
  "cargo-husky",
  "config",
+ "fixedbitset",
  "log",
  "petgraph",
  "pretty_env_logger",

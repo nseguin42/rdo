@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 use crate::runnable::Runnable;
-use crate::runner::WithDependencies;
 use crate::task::Task;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
@@ -93,15 +92,15 @@ impl Runnable for Script {
             .expect("failed to execute process");
 
         if output.status.code().unwrap_or(1) != 0 {
-            println!("{}", output.status);
+            info!("{}", output.status);
         }
 
         if !output.stderr.is_empty() {
-            println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+            info!("stderr: {}", String::from_utf8_lossy(&output.stderr));
         }
 
         if !output.stdout.is_empty() {
-            println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+            info!("stdout: {}", String::from_utf8_lossy(&output.stdout));
         }
 
         Ok(())
@@ -173,12 +172,11 @@ pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
 
 impl From<Script> for Task<Script> {
     fn from(script: Script) -> Self {
-        Task::new(&script.name, script.clone(), script.enabled)
-    }
-}
-
-impl WithDependencies for Script {
-    fn get_dependencies(&self) -> Vec<String> {
-        self.dependencies.clone()
+        Task::new(
+            &script.name,
+            script.dependencies.clone(),
+            script.clone(),
+            script.enabled,
+        )
     }
 }
