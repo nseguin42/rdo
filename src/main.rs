@@ -21,13 +21,26 @@ async fn create_output_channel() -> OutputChannel {
     OutputChannel { rx, tx }
 }
 
-async fn print_output(output_channel: OutputChannel) -> Result<(), Error> {
-    let mut rx = output_channel.rx;
+async fn print_output(mut rx: Receiver<OutputLine>) -> Result<(), Error> {
     while let Some(output_line) = rx.recv().await {
         println!("{}", output_line.text)
     }
 
     Ok(())
+}
+
+fn setup_signal_handler() {
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+        println!("Ctrl-C received, exiting");
+        std::process::exit(0);
+    });
+}
+
+fn setup_output(rx: Receiver<OutputLine>) {
+    tokio::spawn(async move {
+        print_output(rx).await.unwrap();
+    });
 }
 
 #[tokio::main]
@@ -36,19 +49,10 @@ async fn main() {
     let output_channel = create_output_channel().await;
     let args = Cli::parse();
 
-    let tx = output_channel.tx.clone();
+    setup_signal_handler();
+    setup_output(output_channel.rx);
 
-    tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.unwrap();
-        println!("Ctrl-C received, exiting");
-        std::process::exit(0);
-    });
-
-    tokio::spawn(async move {
-        print_output(output_channel).await.unwrap();
-    });
-
-    if let Err(e) = handle_command(tx, args).await {
+    if let Err(e) = handle_command(output_channel.tx, args).await {
         println!("Error: {}", e);
     }
 }
