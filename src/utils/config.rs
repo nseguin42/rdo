@@ -43,3 +43,10 @@ pub fn get_config_from_file(path: &str) -> Result<Config, Error> {
         Err(err) => Err(Error::Config(err)),
     }
 }
+
+pub fn get_config_or_default(config_path: Option<String>) -> Result<Config, Error> {
+    match config_path {
+        Some(path) => get_config_from_file(&path),
+        None => get_config(ConfigType::Production),
+    }
+}

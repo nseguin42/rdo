@@ -6,8 +6,8 @@ use config::Config;
 use serde::{Deserialize, Serialize};
 
 use crate::runnable::Runnable;
-use crate::task::Task;
 use crate::utils::error::Error;
+use crate::utils::graph_binding::GraphLike;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum ScriptType {
@@ -176,20 +176,20 @@ pub fn load_range_from_config(
 }
 
 pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
-    let mut scripts = Vec::new();
-    for (name, _) in config.get_table("script")? {
-        scripts.push(load_one_from_config(&name, config)?);
-    }
-    Ok(scripts)
+    config
+        .get_table("script")
+        .unwrap()
+        .keys()
+        .map(|name| load_one_from_config(name.as_str(), config))
+        .collect()
 }
 
-impl From<Script> for Task<Script> {
-    fn from(script: Script) -> Self {
-        Task::new(
-            &script.name,
-            script.dependencies.clone(),
-            script.clone(),
-            script.enabled,
-        )
+impl<'a> GraphLike<'a, String> for Script {
+    fn get_key(&'a self) -> &'a String {
+        &self.name
+    }
+
+    fn get_children_keys(&'a self) -> Vec<&'a String> {
+        self.dependencies.iter().collect()
     }
 }

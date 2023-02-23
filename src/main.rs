@@ -1,12 +1,10 @@
 use clap::Parser;
-use config::Config;
-use log::info;
+use rdo::resolver::Resolver;
 
-use rdo::runner::TaskRunner;
+use rdo::runner::Runner;
 use rdo::script::{load_all_from_config, Script};
-use rdo::task::Task;
 use rdo::utils::cli::{Cli, Commands};
-use rdo::utils::config::{get_config, get_config_from_file, ConfigType};
+use rdo::utils::config::get_config_or_default;
 use rdo::utils::error::Error;
 use rdo::utils::logger::setup_logger;
 
@@ -19,7 +17,7 @@ fn main() {
 fn handle_command(args: Cli) -> Result<(), Error> {
     match args.command {
         None => {
-            run_scripts(None, None)?;
+            run(None, None)?;
         }
         Some(command) => match command {
             Commands::Run {
@@ -27,12 +25,12 @@ fn handle_command(args: Cli) -> Result<(), Error> {
                 config: config_path,
                 ..
             } => {
-                run_scripts(scripts, config_path)?;
+                run(scripts, config_path)?;
             }
             Commands::List {
                 config: config_path,
             } => {
-                list_scripts(config_path)?;
+                list(config_path)?;
             }
         },
     }
@@ -40,50 +38,26 @@ fn handle_command(args: Cli) -> Result<(), Error> {
     Ok(())
 }
 
-fn get_config_or_default(config_path: Option<String>) -> Result<Config, Error> {
-    match config_path {
-        Some(path) => get_config_from_file(&path),
-        None => get_config(ConfigType::Production),
-    }
+fn run(maybe_script_names: Option<String>, maybe_config_path: Option<String>) -> Result<(), Error> {
+    let config = get_config_or_default(maybe_config_path)?;
+    let scripts = load_all_from_config(&config)?;
+    let resolver = Resolver::new(scripts.iter().collect())?;
+
+    let sorted = match maybe_script_names {
+        Some(script_names) => {
+            let scripts_to_run = script_names
+                .split(',')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            resolver.resolve(scripts_to_run)?
+        }
+        None => resolver.resolve_all()?,
+    };
+
+    Runner::<Script>::new(sorted).run()
 }
 
-fn run_scripts(maybe_scripts: Option<String>, config_path: Option<String>) -> Result<(), Error> {
-    let config = get_config_or_default(config_path)?;
-    let scripts = load_all_from_config(&config)?
-        .into_iter()
-        .filter(|script| {
-            if let Some(scripts_to_run) = &maybe_scripts {
-                scripts_to_run.contains(&script.name)
-            } else {
-                true
-            }
-        })
-        .map(|script| script.into())
-        .collect::<Vec<Task<Script>>>();
-
-    info!(
-        "Running scripts: {}",
-        scripts
-            .iter()
-            .map(|s| &s.name)
-            .fold(String::new(), |acc, s| {
-                if acc.is_empty() {
-                    s.to_string()
-                } else {
-                    format!("{}, {}", acc, s)
-                }
-            })
-    );
-
-    let scripts = scripts.iter().collect::<Vec<_>>();
-    let task_runner = TaskRunner::new(scripts).unwrap();
-    task_runner.run_all().unwrap();
-
-    Ok(())
-}
-
-fn list_scripts(config_path: Option<String>) -> Result<(), Error> {
-    info!("Listing scripts");
+fn list(config_path: Option<String>) -> Result<(), Error> {
     let config = get_config_or_default(config_path)?;
     let scripts = load_all_from_config(&config).unwrap();
 
