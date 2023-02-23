@@ -6,9 +6,9 @@ use petgraph::graph::DiGraph;
 use petgraph::prelude::NodeIndex;
 use petgraph::visit::{NodeFiltered, Topo, Walker};
 
-use crate::error::Error;
 use crate::runnable::Runnable;
 use crate::task::Task;
+use crate::utils::error::Error;
 
 pub trait GraphLike<'a, K>
 where

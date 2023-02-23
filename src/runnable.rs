@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::utils::error::Error;
 
 pub trait Runnable {
     fn run(&self) -> Result<(), Error>;

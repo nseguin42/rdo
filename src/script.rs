@@ -5,9 +5,9 @@ use std::process::Command;
 use config::Config;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error;
 use crate::runnable::Runnable;
 use crate::task::Task;
+use crate::utils::error::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum ScriptType {
@@ -117,7 +117,7 @@ fn is_executable(path: &Option<String>) -> bool {
         .unwrap_or(false)
 }
 
-pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
+pub fn load_one_from_config(name: &str, config: &Config) -> Result<Script, Error> {
     let path = config
         .get::<Option<String>>(&format!("script.{}.path", name))
         .unwrap_or_default();
@@ -162,10 +162,23 @@ pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
     ))
 }
 
+pub fn load_range_from_config(
+    config: &Config,
+    scripts_to_add: Vec<String>,
+) -> Result<Vec<Script>, Error> {
+    let mut scripts = Vec::new();
+    for (name, _) in config.get_table("script")? {
+        if scripts_to_add.contains(&name) {
+            scripts.push(load_one_from_config(&name, config)?);
+        }
+    }
+    Ok(scripts)
+}
+
 pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
     let mut scripts = Vec::new();
     for (name, _) in config.get_table("script")? {
-        scripts.push(load_from_config(&name, config)?);
+        scripts.push(load_one_from_config(&name, config)?);
     }
     Ok(scripts)
 }

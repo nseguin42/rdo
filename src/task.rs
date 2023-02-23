@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 
-use crate::error::Error;
 use crate::runnable::Runnable;
+use crate::utils::error::Error;
 
 #[derive(Clone)]
 pub struct Task<F>

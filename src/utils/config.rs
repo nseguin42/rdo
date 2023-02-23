@@ -1,6 +1,6 @@
 use config::Config;
 
-use crate::error::Error;
+use crate::utils::error::Error;
 
 #[allow(dead_code)]
 pub enum ConfigType {
@@ -25,6 +25,17 @@ pub fn get_config(config_type: ConfigType) -> Result<Config, Error> {
     let path = format!("{}/{}", CONFIG_DIR, config_type.to_string());
     let config = Config::builder()
         .add_source(config::File::with_name(&path))
+        .build();
+
+    match config {
+        Ok(config) => Ok(config),
+        Err(err) => Err(Error::Config(err)),
+    }
+}
+
+pub fn get_config_from_file(path: &str) -> Result<Config, Error> {
+    let config = Config::builder()
+        .add_source(config::File::with_name(path))
         .build();
 
     match config {

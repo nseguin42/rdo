@@ -1,7 +1,7 @@
-use crate::error::Error;
 use crate::runnable::Runnable;
 use crate::task::Task;
-use crate::task_queue::GraphBinding;
+use crate::utils::error::Error;
+use crate::utils::graph_binding::GraphBinding;
 
 pub struct TaskRunner<'a, F>
 where
@@ -47,6 +47,9 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::script::{load_all_from_config, Script};
+    use crate::utils::config::{get_config, ConfigType};
+
     use super::*;
 
     #[test]
@@ -79,5 +82,21 @@ mod tests {
 
         let task_runner = TaskRunner::new(tasks).unwrap();
         task_runner.run_all().unwrap();
+    }
+
+    #[test]
+    fn test_run_all_scripts() {
+        let config = get_config(ConfigType::Test).unwrap();
+        let scripts = load_all_from_config(&config)
+            .unwrap()
+            .into_iter()
+            .map(|script| script.into())
+            .collect::<Vec<Task<Script>>>();
+
+        // Borrow each script
+        let scripts = scripts.iter().collect::<Vec<_>>();
+
+        let runner = TaskRunner::new(scripts).unwrap();
+        runner.run_all().unwrap();
     }
 }
