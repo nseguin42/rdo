@@ -1,4 +1,5 @@
 use clap::Parser;
+use log::{error, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -23,7 +24,7 @@ async fn create_output_channel() -> OutputChannel {
 
 async fn print_output(mut rx: Receiver<OutputLine>) -> Result<(), Error> {
     while let Some(output_line) = rx.recv().await {
-        println!("{}", output_line.text)
+        info!("{}", output_line.text)
     }
 
     Ok(())
@@ -32,7 +33,7 @@ async fn print_output(mut rx: Receiver<OutputLine>) -> Result<(), Error> {
 fn setup_signal_handler() {
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
-        println!("Ctrl-C received, exiting");
+        info!("Ctrl-C received, exiting");
         std::process::exit(0);
     });
 }
@@ -53,7 +54,8 @@ async fn main() {
     setup_output(output_channel.rx);
 
     if let Err(e) = handle_command(output_channel.tx, args).await {
-        println!("Error: {}", e);
+        error!("Error: {}", e);
+        std::process::exit(1);
     }
 }
 
