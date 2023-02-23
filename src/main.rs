@@ -1,9 +1,8 @@
 use clap::Parser;
-use log::{error, info};
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
+use log::error;
+use tokio::sync::mpsc::Sender;
 
-use rdo::console::OutputLine;
+use rdo::console::{create_output_channel, setup_output, setup_signal_handler, OutputLine};
 use rdo::resolver::Resolver;
 use rdo::runner::Runner;
 use rdo::script::{load_all_from_config, Script};
@@ -11,38 +10,6 @@ use rdo::utils::cli::{Cli, Commands};
 use rdo::utils::config::get_config_or_default;
 use rdo::utils::error::Error;
 use rdo::utils::logger::setup_logger;
-
-pub struct OutputChannel {
-    rx: Receiver<OutputLine>,
-    tx: Sender<OutputLine>,
-}
-
-async fn create_output_channel() -> OutputChannel {
-    let (tx, rx) = mpsc::channel::<OutputLine>(100);
-    OutputChannel { rx, tx }
-}
-
-async fn print_output(mut rx: Receiver<OutputLine>) -> Result<(), Error> {
-    while let Some(output_line) = rx.recv().await {
-        info!("{}", output_line.text)
-    }
-
-    Ok(())
-}
-
-fn setup_signal_handler() {
-    tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.unwrap();
-        info!("Ctrl-C received, exiting");
-        std::process::exit(0);
-    });
-}
-
-fn setup_output(rx: Receiver<OutputLine>) {
-    tokio::spawn(async move {
-        print_output(rx).await.unwrap();
-    });
-}
 
 #[tokio::main]
 async fn main() {
