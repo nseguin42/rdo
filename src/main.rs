@@ -1,6 +1,9 @@
 use clap::Parser;
-use rdo::resolver::Resolver;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
+use rdo::console::OutputLine;
+use rdo::resolver::Resolver;
 use rdo::runner::Runner;
 use rdo::script::{load_all_from_config, Script};
 use rdo::utils::cli::{Cli, Commands};
@@ -8,16 +11,52 @@ use rdo::utils::config::get_config_or_default;
 use rdo::utils::error::Error;
 use rdo::utils::logger::setup_logger;
 
-fn main() {
-    setup_logger(None);
-    let args = Cli::parse();
-    handle_command(args).expect("An exception occurred")
+pub struct OutputChannel {
+    rx: Receiver<OutputLine>,
+    tx: Sender<OutputLine>,
 }
 
-fn handle_command(args: Cli) -> Result<(), Error> {
+async fn create_output_channel() -> OutputChannel {
+    let (tx, rx) = mpsc::channel::<OutputLine>(100);
+    OutputChannel { rx, tx }
+}
+
+async fn print_output(output_channel: OutputChannel) -> Result<(), Error> {
+    let mut rx = output_channel.rx;
+    while let Some(output_line) = rx.recv().await {
+        println!("{}", output_line.text)
+    }
+
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() {
+    setup_logger(None);
+    let output_channel = create_output_channel().await;
+    let args = Cli::parse();
+
+    let tx = output_channel.tx.clone();
+
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+        println!("Ctrl-C received, exiting");
+        std::process::exit(0);
+    });
+
+    tokio::spawn(async move {
+        print_output(output_channel).await.unwrap();
+    });
+
+    if let Err(e) = handle_command(tx, args).await {
+        println!("Error: {}", e);
+    }
+}
+
+async fn handle_command(output: Sender<OutputLine>, args: Cli) -> Result<(), Error> {
     match args.command {
         None => {
-            run(None, None)?;
+            run(output, None, None).await?;
         }
         Some(command) => match command {
             Commands::Run {
@@ -25,7 +64,7 @@ fn handle_command(args: Cli) -> Result<(), Error> {
                 config: config_path,
                 ..
             } => {
-                run(scripts, config_path)?;
+                run(output, scripts, config_path).await?;
             }
             Commands::List {
                 config: config_path,
@@ -38,7 +77,11 @@ fn handle_command(args: Cli) -> Result<(), Error> {
     Ok(())
 }
 
-fn run(maybe_script_names: Option<String>, maybe_config_path: Option<String>) -> Result<(), Error> {
+async fn run(
+    output: Sender<OutputLine>,
+    maybe_script_names: Option<String>,
+    maybe_config_path: Option<String>,
+) -> Result<(), Error> {
     let config = get_config_or_default(maybe_config_path)?;
     let scripts = load_all_from_config(&config)?;
     let resolver = Resolver::new(scripts.iter().collect())?;
@@ -54,7 +97,7 @@ fn run(maybe_script_names: Option<String>, maybe_config_path: Option<String>) ->
         None => resolver.resolve_all()?,
     };
 
-    Runner::<Script>::new(sorted).run()
+    Runner::<Script>::new(sorted).run(output).await
 }
 
 fn list(config_path: Option<String>) -> Result<(), Error> {

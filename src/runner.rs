@@ -1,5 +1,8 @@
-use crate::runnable::Runnable;
+use tokio::sync::mpsc::Sender;
 
+use crate::console::OutputLine;
+use crate::runnable::Runnable;
+use crate::script::Script;
 use crate::utils::error::Error;
 
 pub struct Runner<'a, T>
@@ -9,17 +12,16 @@ where
     tasks: Vec<&'a T>,
 }
 
-impl<'a, T> Runner<'a, T>
-where
-    T: Runnable,
-{
-    pub fn new(tasks: Vec<&'a T>) -> Self {
+impl<'a> Runner<'a, Script> {
+    pub fn new(tasks: Vec<&'a Script>) -> Runner<'a, Script> {
         Runner { tasks }
     }
 
-    pub fn run(&self) -> Result<(), Error> {
-        for task in &self.tasks {
-            task.run()?;
+    pub async fn run(&self, output: Sender<OutputLine>) -> Result<(), Error> {
+        for script in self.tasks.iter() {
+            let msg = format!("Running script: {}", script.name);
+            output.send(OutputLine::new(msg)).await?;
+            script.run()?;
         }
         Ok(())
     }

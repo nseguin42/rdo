@@ -1,3 +1,5 @@
+use crate::console::OutputLine;
+
 #[derive(Debug)]
 pub enum Error {
     Io(std::io::Error),
@@ -66,5 +68,11 @@ impl std::fmt::Display for Error {
             }
             Error::scriptNotFound(script) => write!(f, "script not found: {}", script),
         }
+    }
+}
+
+impl<T> From<tokio::sync::mpsc::error::SendError<T>> for Error {
+    fn from(err: tokio::sync::mpsc::error::SendError<T>) -> Error {
+        Error::Unspecified(err.to_string())
     }
 }
