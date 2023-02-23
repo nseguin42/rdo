@@ -5,8 +5,8 @@ pub trait Runnable {
 }
 
 impl<F> Runnable for F
-where
-    F: Fn() -> Result<(), Error> + Send + Sync,
+    where
+        F: Fn() -> Result<(), Error> + Send + Sync,
 {
     fn run(&self) -> Result<(), Error> {
         self()

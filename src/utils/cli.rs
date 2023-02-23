@@ -12,8 +12,8 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     #[command(
-        about = "Run the given script(s) and all of their dependencies",
-        long_about = "Run the given script(s). If no scripts are given, all scripts will be run."
+    about = "Run the given script(s) and all of their dependencies",
+    long_about = "Run the given script(s). If no scripts are given, all scripts will be run."
     )]
     Run {
         #[arg(value_name = "script", long, num_args =..)]
