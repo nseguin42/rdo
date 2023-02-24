@@ -4,9 +4,8 @@ pub enum Error {
     Parse(std::num::ParseIntError),
     Config(config::ConfigError),
     Conversion(String),
-    script(String),
-    scriptDependencyNotRun(String, String),
-    scriptNotFound(String),
+    ScriptDependencyNotRun(String, String),
+    ScriptNotFound(String),
     Unspecified(String),
 }
 
@@ -60,11 +59,10 @@ impl std::fmt::Display for Error {
             Error::Config(err) => write!(f, "Config error: {}", err),
             Error::Conversion(err) => write!(f, "Conversion error: {}", err),
             Error::Unspecified(err) => write!(f, "Unspecified error: {}", err),
-            Error::script(err) => write!(f, "script error: {}", err),
-            Error::scriptDependencyNotRun(script, dep) => {
+            Error::ScriptDependencyNotRun(script, dep) => {
                 write!(f, "Dependency of {} not run: {}", script, dep)
             }
-            Error::scriptNotFound(script) => write!(f, "script not found: {}", script),
+            Error::ScriptNotFound(script) => write!(f, "script not found: {}", script),
         }
     }
 }
