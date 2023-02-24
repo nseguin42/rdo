@@ -5,17 +5,17 @@ use crate::utils::error::Error;
 use crate::utils::graph_binding::{GraphBinding, GraphLike};
 
 pub struct Resolver<'a, T, K>
-    where
-        T: GraphLike<'a, K>,
-        K: Eq + Hash,
+where
+    T: GraphLike<'a, K>,
+    K: Eq + Hash,
 {
     graph_binding: GraphBinding<'a, T, K>,
 }
 
 impl<'a, T, K> Resolver<'a, T, K>
-    where
-        T: GraphLike<'a, K> + Debug + 'a,
-        K: Eq + Hash + Debug + 'a,
+where
+    T: GraphLike<'a, K> + Debug + 'a,
+    K: Eq + Hash + Debug + 'a,
 {
     pub fn new(nodes: Vec<&'a T>) -> Result<Resolver<'a, T, K>, Error> {
         let graph_binding = GraphBinding::new(nodes)?;

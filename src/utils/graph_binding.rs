@@ -14,18 +14,18 @@ pub trait GraphLike<'a, K> {
 }
 
 pub struct GraphBinding<'a, T, K>
-    where
-        T: GraphLike<'a, K> + 'a,
-        K: Eq + Hash,
+where
+    T: GraphLike<'a, K> + 'a,
+    K: Eq + Hash,
 {
     graph: DiGraph<&'a T, ()>,
     key_to_id: HashMap<&'a K, NodeIndex>,
 }
 
 impl<'a, T, K> GraphBinding<'a, T, K>
-    where
-        T: GraphLike<'a, K> + Debug + 'a,
-        K: Eq + Hash + Debug,
+where
+    T: GraphLike<'a, K> + Debug + 'a,
+    K: Eq + Hash + Debug,
 {
     pub fn new(nodes: Vec<&'a T>) -> Result<GraphBinding<'a, T, K>, Error> {
         let graph = DiGraph::new();
@@ -117,7 +117,7 @@ impl<'a, T, K> GraphBinding<'a, T, K>
         Ok(nodes)
     }
 
-    pub fn topological_sort(&'a self, nodes: Vec<&'a T>) -> impl Iterator<Item=&'a T> + 'a {
+    pub fn topological_sort(&'a self, nodes: Vec<&'a T>) -> impl Iterator<Item = &'a T> + 'a {
         let node_ids = self.get_transitive_closure(nodes).unwrap();
         let node_filter_fn = |id: NodeIndex| node_ids.contains(&id);
 

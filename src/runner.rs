@@ -6,8 +6,8 @@ use crate::script::Script;
 use crate::utils::error::Error;
 
 pub struct Runner<'a, T>
-    where
-        T: Runnable,
+where
+    T: Runnable,
 {
     tasks: Vec<&'a T>,
 }
