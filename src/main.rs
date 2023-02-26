@@ -1,8 +1,9 @@
 use clap::Parser;
 use log::info;
 use tokio::runtime::Runtime;
-use tokio::sync::watch;
+use tokio::sync::mpsc::Sender as MpscSender;
 use tokio::sync::watch::{Receiver as WatchReceiver, Sender};
+use tokio::sync::{mpsc, watch};
 use tokio::task;
 
 use rdo::resolver::Resolver;
@@ -14,11 +15,16 @@ use rdo::utils::logger::setup_logger;
 
 fn main() {
     let args = Cli::parse();
+
     let (stdin_tx, stdin_rx) = watch::channel::<String>(String::new());
+    let (stdout_tx, stdout_rx) = mpsc::channel::<String>(100);
+
     std::thread::spawn(move || read_stdin(stdin_tx));
+
     Runtime::new().unwrap().block_on(async move {
         task::spawn(handle_signals());
-        handle_command(stdin_rx, args).await;
+        task::spawn(handle_output(stdout_rx));
+        handle_command(stdin_rx, stdout_tx, args).await;
     });
 }
 
@@ -32,15 +38,15 @@ fn read_stdin(stdin_tx: Sender<String>) -> String {
     }
 }
 
-async fn handle_command(rx: WatchReceiver<String>, args: Cli) {
+async fn handle_command(stdin_rx: WatchReceiver<String>, stdout_tx: MpscSender<String>, args: Cli) {
     match args.command {
-        None => run(rx, None, None).await,
+        None => run(stdin_rx, stdout_tx, None, None).await,
         Some(command) => match command {
             Commands::Run {
                 scripts,
                 config: config_path,
                 ..
-            } => run(rx, scripts, config_path).await,
+            } => run(stdin_rx, stdout_tx, scripts, config_path).await,
             Commands::List {
                 config: config_path,
             } => list(config_path),
@@ -50,6 +56,7 @@ async fn handle_command(rx: WatchReceiver<String>, args: Cli) {
 
 async fn run(
     stdin_rx: WatchReceiver<String>,
+    stdout_tx: MpscSender<String>,
     maybe_script_names: Option<String>,
     maybe_config_path: Option<String>,
 ) {
@@ -70,11 +77,8 @@ async fn run(
         None => resolver.resolve_all().unwrap(),
     };
 
-    let (output_tx, output_rx) = tokio::sync::mpsc::channel(100);
-    task::spawn(handle_output(output_rx));
-
     for script in sorted {
-        script.run(stdin_rx.clone(), output_tx.clone()).await;
+        script.run(stdin_rx.clone(), stdout_tx.clone()).await;
     }
 }
 
