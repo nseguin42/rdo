@@ -29,7 +29,9 @@ jobs:
         run: |
           mkdir -p release
           for archive in ${{ matrix.archive }}; do
-            tar -cJf release/${{ matrix.target }}.tar.${archive} -C target/${{ matrix.target }}/release/ .
+            cmd="tar -cJf release/${{ matrix.target }}.tar.${archive} -C target/${{ matrix.target }}/release/ ."
+            echo $cmd
+            $cmd
           done
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
