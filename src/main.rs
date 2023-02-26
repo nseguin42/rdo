@@ -101,3 +101,38 @@ fn list(config_path: Option<String>) -> Result<(), Error> {
     println!("Available scripts: {}", script_names);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use tokio::io::AsyncBufReadExt;
+    use tokio::select;
+
+    use super::*;
+
+    async fn read_stdin_async(stdin_tx: watch::Sender<String>) {
+        let stdin = tokio::io::stdin();
+        let mut lines = tokio::io::BufReader::new(stdin).lines();
+        while let Some(line) = lines.next_line().await.unwrap() {
+            stdin_tx.send(line).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_run() {
+        let args = "rdo run --config ./config/config.test.toml".split(' ');
+        let cli = Cli::parse_from(args);
+
+        let (stdin_tx, stdin_rx) = watch::channel::<String>(String::new());
+        let (stdout_tx, stdout_rx) = mpsc::channel::<String>(1);
+
+        select! {
+            _ = read_stdin_async(stdin_tx) => {}
+            _ = handle_output(stdout_rx) => {}
+            result = handle_command(stdin_rx, stdout_tx, cli) => {
+                assert!(result.is_ok());
+                exit(0);
+            }
+        }
+    }
+}
