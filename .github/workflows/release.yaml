@@ -35,3 +35,5 @@ jobs:
             LICENSE
             README.md
             release/${{ matrix.target }}.tar.gz
+            release/${{ matrix.target }}.tar.xz
+            release/${{ matrix.target }}.tar.zst
