@@ -6,8 +6,6 @@ on:
       - "v*"
   workflow_dispatch:
 
-
-
 jobs:
   tagged-release:
     name: Tagged release ${{ matrix.target }}

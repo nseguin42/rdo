@@ -6,7 +6,6 @@ on:
       - "main"
   workflow_dispatch:
 
-
 jobs:
   pre-release:
     name: Pre-release ${{ matrix.target }}
