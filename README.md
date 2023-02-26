@@ -71,8 +71,9 @@ INFO rdo::script > stdout: test_1 | Run after all other tests.
 
 ## TODO
 
+- [ ] Complete documentation and finish cli help
 - [ ] Improve console output / human-friendliness
-- [ ] Improve error handling
+- [x] Improve error handling
 - [ ] Add support for more script types
 - [ ] Add script templates / connectors
     - Package update script
