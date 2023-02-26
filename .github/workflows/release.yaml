@@ -32,6 +32,6 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            LICENSE.txt
+            LICENSE
             README.md
             release/${{ matrix.target }}.tar.gz
