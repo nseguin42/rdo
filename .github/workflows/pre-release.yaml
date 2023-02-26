@@ -1,10 +1,11 @@
 name: Pre-release
 
-on:
-  - workflow_dispatch
-  - push:
-      branches:
-        - "main"
+on: [
+  workflow_dispatch,
+  push:
+    branches:
+      - "main"
+]
 
 jobs:
   pre-release:

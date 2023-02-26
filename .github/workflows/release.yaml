@@ -1,15 +1,15 @@
-name: Pre-release
+name: Release
 
-on:
-  - workflow_dispatch
-  - push:
-      tags:
-        - "v*"
-
+on: [
+  workflow_dispatch,
+  push:
+    tags:
+      - "v*"
+]
 
 jobs:
   tagged-release:
-    name: Tagged release ${{ matrix.target }}
+    name: Tagged release ${ { matrix.target } }
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -22,8 +22,8 @@ jobs:
       - name: install toolchain
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
-      - name: cargo build --verbose --release --target ${{ matrix.target }}
-        run: cargo build --verbose --release --target ${{ matrix.target }}
+      - name: cargo build --verbose --release --target ${ { matrix.target } }
+        run: cargo build --verbose --release --target ${ { matrix.target } }
       - name: package
         run: |
           mkdir -p release
