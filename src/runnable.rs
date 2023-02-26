@@ -1,4 +1,4 @@
-use crate::utils::error::Error;
+
 use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver as WatchReceiver;
