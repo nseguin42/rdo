@@ -14,8 +14,9 @@ use crate::runnable::Runnable;
 use crate::utils::error::Error;
 use crate::utils::graph_binding::GraphLike;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash, Default)]
 pub enum ScriptType {
+    #[default]
     Bash,
 }
 
@@ -35,7 +36,7 @@ impl Script {
         name: &str,
         cmd: Option<String>,
         path: Option<String>,
-        script_type: ScriptType,
+        script_type: Option<ScriptType>,
         args: Vec<String>,
         dependencies: Vec<String>,
         enabled: bool,
@@ -71,7 +72,7 @@ impl Script {
             name: name.to_string(),
             cmd,
             path,
-            script_type,
+            script_type: script_type.unwrap_or_default(),
             args,
             dependencies,
             enabled,
@@ -167,14 +168,17 @@ fn is_executable(path: &Option<String>) -> bool {
         .unwrap_or(false)
 }
 
-pub fn load_one_from_config(name: &str, config: &Config) -> Result<Script, Error> {
+pub fn load_script_from_config(name: &str, config: &Config) -> Result<Script, Error> {
     let path = config
         .get::<Option<String>>(&format!("script.{}.path", name))
         .unwrap_or_default();
     let cmd = config
         .get::<Option<String>>(&format!("script.{}.cmd", name))
         .unwrap_or_default();
-    let script_type = config.get::<ScriptType>(&format!("script.{}.type", name))?;
+    let script_type = config
+        .get::<Option<ScriptType>>(&format!("script.{}.type", name))
+        .unwrap_or_default();
+
     let args = config
         .get_array(&format!("script.{}.args", name))
         .unwrap_or_default()
@@ -212,25 +216,24 @@ pub fn load_one_from_config(name: &str, config: &Config) -> Result<Script, Error
     ))
 }
 
-pub fn load_range_from_config(
+pub fn load_scripts_from_config(
     config: &Config,
     scripts_to_add: Vec<String>,
 ) -> Result<Vec<Script>, Error> {
     let mut scripts = Vec::new();
     for (name, _) in config.get_table("script")? {
         if scripts_to_add.contains(&name) {
-            scripts.push(load_one_from_config(&name, config)?);
+            scripts.push(load_script_from_config(&name, config)?);
         }
     }
     Ok(scripts)
 }
 
-pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
+pub fn load_all_scripts_from_config(config: &Config) -> Result<Vec<Script>, Error> {
     config
-        .get_table("script")
-        .unwrap()
+        .get_table("script")?
         .keys()
-        .map(|name| load_one_from_config(name.as_str(), config))
+        .map(|name| load_script_from_config(name.as_str(), config))
         .collect()
 }
 

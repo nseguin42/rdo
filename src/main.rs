@@ -10,7 +10,7 @@ use tokio::task::spawn_blocking;
 
 use rdo::resolver::Resolver;
 use rdo::runnable::Runnable;
-use rdo::script::load_all_from_config;
+use rdo::script::load_all_scripts_from_config;
 use rdo::utils::cli::{handle_output, handle_signals, read_stdin, Cli, Commands};
 use rdo::utils::config::get_config_or_default;
 use rdo::utils::error::Error;
@@ -66,7 +66,7 @@ async fn run(
     let config = get_config_or_default(maybe_config_path)?;
     setup_logger(&config);
 
-    let scripts = load_all_from_config(&config)?;
+    let scripts = load_all_scripts_from_config(&config)?;
     let resolver = Resolver::new(scripts.iter().collect())?;
 
     let sorted = match maybe_script_names {
@@ -91,7 +91,7 @@ async fn run(
 
 fn list(config_path: Option<String>) -> Result<(), Error> {
     let config = get_config_or_default(config_path)?;
-    let scripts = load_all_from_config(&config)?;
+    let scripts = load_all_scripts_from_config(&config)?;
     let script_names = scripts
         .iter()
         .map(|s| s.name.clone())
