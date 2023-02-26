@@ -81,10 +81,13 @@ async fn run(
 fn list(config_path: Option<String>) {
     let config = get_config_or_default(config_path).unwrap();
     let scripts = load_all_from_config(&config).unwrap();
+    let script_names = scripts
+        .iter()
+        .map(|s| s.name.clone())
+        .collect::<Vec<String>>()
+        .join(", ");
 
-    for script in scripts {
-        println!("{}", script.name);
-    }
+    println!("Available scripts: {}", script_names);
 }
 
 async fn handle_signals() {
