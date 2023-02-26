@@ -1,12 +1,12 @@
-name: Release
+name: Rust Build/Release
 
 on:
-  push:
-    branches: [ "main" ]
+  workflow_call:
 
 jobs:
   tagged-release:
     name: Tagged release ${{ matrix.target }}
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -15,12 +15,8 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             archive: tar.gz tar.xz tar.zst
     steps:
-      - uses: actions/checkout@v3
-      - name: Install toolchain
-        run: rustup toolchain install stable --profile minimal
-      - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} --locked
       - name: Package
         run: |
           mkdir -p release
@@ -30,7 +26,6 @@ jobs:
             $cmd
           done
       - uses: "softprops/action-gh-release@v1"
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             LICENSE

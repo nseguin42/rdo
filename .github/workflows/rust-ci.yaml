@@ -2,9 +2,9 @@ name: Rust CI
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "main", "dev" ]
   pull_request:
-    branches: [ "dev" ]
+    branches: [ "main", "dev" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,7 +21,7 @@ jobs:
         with:
           skip_after_successful_duplicate: 'true'
           do_not_skip: '["push"]'
-          paths_ignore: '["README.md", "LICENSE", ".gitignore", ".github/**", ".rustfmt.toml"]'
+          paths_ignore: '[ "README.md", "LICENSE", ".gitignore", ".github/**", ".rustfmt.toml" ]'
           paths_filter: |
             build:
               paths:
@@ -35,37 +35,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: install toolchain
         run: rustup toolchain install stable --profile minimal
+
       - uses: Swatinem/rust-cache@v2
-      - name: install tools
-        run: |
-          rustup component add clippy
-          rustup component add rustfmt
-          cargo install cargo-audit clippy-sarif sarif-fmt
-      - name: cargo check --verbose
-        run: cargo check --verbose
-      - name: cargo fmt --verbose -- --check
-        run: cargo fmt --verbose -- --check
-      - name: cargo clippy
-          --all-features
-          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
-        run: cargo clippy
-          --all-features
-          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
-      - name: cargo audit
-        run: cargo audit
-      - name: cargo build --verbose
-        run: cargo build --verbose
-      - name: cargo doc --verbose
-        run: cargo doc --verbose
-      - name: cargo test --verbose
-        run: cargo test --verbose
-      - name: Upload clippy analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v2.2.5
+
+      - uses: ./.github/workflows/bump-tag.yaml
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+      - name: Build (Development)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        uses: ./.github/workflows/rust-build-and-test.yaml
         with:
-          sarif_file: rust-clippy-results.sarif
-          wait-for-processing: true
-  release:
-    needs: build
-    uses: ./.github/workflows/pre-release.yaml
+          build_type: dev
+
+      - name: Build (Release)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: ./.github/workflows/rust-build-and-release.yaml
+        with:
+          build_type: release

@@ -1,0 +1,15 @@
+name: Rust Build/Test
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    needs: pre_job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/actions/rust-lint.yaml
+      - name: cargo build --verbose
+        run: cargo build --verbose
+      - name: cargo test --verbose
+        run: cargo test --verbose
