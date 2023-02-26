@@ -41,6 +41,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - uses: ./.github/actions/rust-lint.yaml
+
       - uses: ./.github/workflows/bump-tag.yaml
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
