@@ -1,4 +1,3 @@
-use std::io::BufRead;
 use std::io::Read;
 use std::os::unix::prelude::PermissionsExt;
 use std::process::Stdio;
@@ -6,7 +5,7 @@ use std::process::Stdio;
 use async_trait::async_trait;
 use config::Config;
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, Lines};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader, Lines};
 use tokio::process::{ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::watch::Receiver as WatchReceiver;
