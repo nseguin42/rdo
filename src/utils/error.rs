@@ -3,10 +3,13 @@ pub enum Error {
     Io(std::io::Error),
     Parse(std::num::ParseIntError),
     Config(config::ConfigError),
-    Conversion(String),
     ScriptDependencyNotRun(String, String),
     ScriptNotFound(String),
     Unspecified(String),
+    StdinClosed,
+    StdoutClosed,
+    StderrClosed,
+    LoggingSetupFailed,
 }
 
 impl From<std::io::Error> for Error {
@@ -39,30 +42,21 @@ impl From<&str> for Error {
     }
 }
 
-impl From<std::string::FromUtf8Error> for Error {
-    fn from(err: std::string::FromUtf8Error) -> Error {
-        Error::Conversion(err.to_string())
-    }
-}
-
-impl From<std::string::FromUtf16Error> for Error {
-    fn from(err: std::string::FromUtf16Error) -> Error {
-        Error::Conversion(err.to_string())
-    }
-}
-
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Error::Io(err) => write!(f, "IO error: {}", err),
             Error::Parse(err) => write!(f, "Parse error: {}", err),
             Error::Config(err) => write!(f, "Config error: {}", err),
-            Error::Conversion(err) => write!(f, "Conversion error: {}", err),
             Error::Unspecified(err) => write!(f, "Unspecified error: {}", err),
             Error::ScriptDependencyNotRun(script, dep) => {
                 write!(f, "Dependency of {} not run: {}", script, dep)
             }
             Error::ScriptNotFound(script) => write!(f, "script not found: {}", script),
+            Error::LoggingSetupFailed => write!(f, "Failed setting up logger"),
+            Error::StdinClosed => write!(f, "Stdin closed"),
+            Error::StdoutClosed => write!(f, "Stdout closed"),
+            Error::StderrClosed => write!(f, "Stderr closed"),
         }
     }
 }
