@@ -33,13 +33,12 @@ jobs:
             echo $cmd
             $cmd
           done
-      - uses: "marvinpinto/action-automatic-releases@latest"
+      - uses: "softprops/action-gh-release@v1"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
           files: |
             LICENSE
             README.md
             release/${{ matrix.target }}.tar.gz
             release/${{ matrix.target }}.tar.xz
             release/${{ matrix.target }}.tar.zst
+          token: ${{ secrets.RELEASE_PAT }}
