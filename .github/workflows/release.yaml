@@ -16,13 +16,16 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             archive: tar.gz tar.xz tar.zst
     steps:
+      - name: Exit if not on main branch
+        if: endsWith(github.ref, 'main') == false
+        run: exit 0
       - uses: actions/checkout@v3
-      - name: install toolchain
+      - name: Install toolchain
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
-      - name: cargo build --release --target ${{ matrix.target }}
+      - name: Build
         run: cargo build --release --target ${{ matrix.target }}
-      - name: package
+      - name: Package
         run: |
           mkdir -p release
           for archive in ${{ matrix.archive }}; do
