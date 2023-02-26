@@ -2,6 +2,8 @@ use clap::{Parser, Subcommand};
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::watch::Sender;
 
+use crate::utils::error::Error;
+
 #[derive(Parser)]
 #[command(name = "rdo")]
 #[command(bin_name = "rdo")]
@@ -31,14 +33,21 @@ pub enum Commands {
     },
 }
 
-pub fn read_stdin(stdin_tx: Sender<String>) -> String {
+pub fn read_stdin(stdin_tx: Sender<String>) -> Result<(), Error> {
     let mut buffer = String::new();
     let stdin = std::io::stdin();
     loop {
-        stdin.read_line(&mut buffer).unwrap();
-        stdin_tx.send(buffer.clone()).unwrap();
+        stdin.read_line(&mut buffer)?;
+        let result = stdin_tx.send(buffer.clone());
+        match result {
+            Ok(_) => (),
+            Err(_) => break,
+        }
+
         buffer.clear();
     }
+
+    Err(Error::StdinClosed)
 }
 
 pub async fn handle_signals() {

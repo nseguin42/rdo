@@ -64,7 +64,7 @@ async fn run(
     maybe_config_path: Option<String>,
 ) -> Result<(), Error> {
     let config = get_config_or_default(maybe_config_path)?;
-    setup_logger(&config);
+    setup_logger(&config)?;
 
     let scripts = load_all_scripts_from_config(&config)?;
     let resolver = Resolver::new(scripts.iter().collect())?;
