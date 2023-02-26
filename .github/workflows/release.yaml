@@ -1,8 +1,9 @@
-name: Release
+name: Upload Release Asset
 
 on:
-  release:
-    types: [ created ]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   release:
@@ -21,15 +22,31 @@ jobs:
       - name: install toolchain
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
-      - name: cargo check --verbose
-        run: cargo check --verbose
       - name: cargo build --verbose --release
         run: cargo build --verbose --release
-
-      - name: upload artifacts
-        uses: actions/upload-artifact@v3
+      - name: package
+        run: |
+          mkdir -p release
+          for archive in ${{ matrix.archive }}; do
+            tar -cJf release/${{ matrix.target }}.tar.${archive} -C target/${{ matrix.target }}/release/ .
+          done
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: ${{ matrix.target }}
-          path: |
-            target/${{ github.event.repository.name }}
-          retention-days: 1
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: true
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./my-artifact.zip
+          asset_name: my-artifact.zip
+          asset_content_type: application/zip
