@@ -40,3 +40,5 @@ jobs:
           token: ${{ secrets.RELEASE_PAT }}
           prerelease: true
           tag_name: latest
+          generate_release_notes: true
+          name: "Development Build"
