@@ -6,35 +6,17 @@ use petgraph::graph::DiGraph;
 use petgraph::prelude::NodeIndex;
 use petgraph::visit::{NodeFiltered, Topo, Walker};
 
-use crate::error::Error;
-use crate::runnable::Runnable;
-use crate::task::Task;
+use crate::utils::error::Error;
 
-pub trait GraphLike<'a, K>
-where
-    K: PartialEq + Eq + Hash,
-{
+pub trait GraphLike<'a, K> {
     fn get_key(&'a self) -> &'a K;
     fn get_children_keys(&'a self) -> Vec<&'a K>;
 }
 
-impl<'a, F> GraphLike<'a, String> for Task<F>
-where
-    F: Runnable + 'a,
-{
-    fn get_key(&'a self) -> &'a String {
-        &self.name
-    }
-
-    fn get_children_keys(&'a self) -> Vec<&'a String> {
-        self.dependencies.iter().collect()
-    }
-}
-
 pub struct GraphBinding<'a, T, K>
 where
-    T: GraphLike<'a, K> + PartialEq + Eq + 'a,
-    K: PartialEq + Eq + Hash,
+    T: GraphLike<'a, K> + 'a,
+    K: Eq + Hash,
 {
     graph: DiGraph<&'a T, ()>,
     key_to_id: HashMap<&'a K, NodeIndex>,
@@ -42,8 +24,8 @@ where
 
 impl<'a, T, K> GraphBinding<'a, T, K>
 where
-    T: GraphLike<'a, K> + PartialEq + Eq + Debug + 'a,
-    K: PartialEq + Eq + Hash + Debug,
+    T: GraphLike<'a, K> + Debug + 'a,
+    K: Eq + Hash + Debug,
 {
     pub fn new(nodes: Vec<&'a T>) -> Result<GraphBinding<'a, T, K>, Error> {
         let graph = DiGraph::new();
@@ -123,6 +105,16 @@ where
 
     pub fn get_all_nodes(&self) -> Vec<&'a T> {
         self.graph.node_weights().copied().collect()
+    }
+
+    pub fn find_nodes_by_keys(&self, keys: Vec<K>) -> Result<Vec<&'a T>, Error> {
+        let mut nodes = Vec::new();
+        for key in keys {
+            let node_id = self.find_node_id_by_key(&key)?;
+            let node = self.graph.node_weight(node_id).unwrap();
+            nodes.push(*node);
+        }
+        Ok(nodes)
     }
 
     pub fn topological_sort(&'a self, nodes: Vec<&'a T>) -> impl Iterator<Item = &'a T> + 'a {

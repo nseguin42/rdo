@@ -6,13 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.64"
+clap = { version = "4.1.6", features = ["derive", "wrap_help", "suggestions"] }
 config = { version = "0.13.3", features = ["toml"] }
 fixedbitset = "0.4.2"
 log = { version = "0.4.17", features = ["std", "serde"] }
 petgraph = { version = "0.6.3", features = ["serde-1"] }
 pretty_env_logger = "0.4.0"
 serde = { version = "1.0.152", features = ["derive"] }
-uuid = { version = "1.3.0", features = ["serde", "v4"] }
+signal-hook-tokio = { version = "0.3.1", features = ["futures-v0_3"] }
+tokio = { version = "1.25.0", features = ["full", "sync", "rt"] }
+tokio-stream = { version = "0.1.12", features = ["sync"] }
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "user-hooks", "run-cargo-fmt"] }

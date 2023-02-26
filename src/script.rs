@@ -1,13 +1,19 @@
+use std::io::BufRead;
 use std::io::Read;
 use std::os::unix::prelude::PermissionsExt;
-use std::process::Command;
+use std::process::Stdio;
 
+use async_trait::async_trait;
 use config::Config;
 use serde::{Deserialize, Serialize};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, Lines};
+use tokio::process::{ChildStderr, ChildStdin, ChildStdout, Command};
+use tokio::sync::mpsc::Sender;
+use tokio::sync::watch::Receiver as WatchReceiver;
 
-use crate::error::Error;
 use crate::runnable::Runnable;
-use crate::task::Task;
+use crate::utils::error::Error;
+use crate::utils::graph_binding::GraphLike;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum ScriptType {
@@ -81,29 +87,74 @@ fn load_script_file(path: &Option<String>) -> Result<String, Error> {
     Ok(contents)
 }
 
+#[async_trait]
 impl Runnable for Script {
-    fn run(&self) -> Result<(), Error> {
-        let output = Command::new("bash")
+    async fn run(
+        &self,
+        mut stdin_rx: WatchReceiver<String>,
+        output_tx: Sender<String>,
+    ) -> Result<(), Error> {
+        debug!("Starting script: {}", self.name);
+        let mut child = Command::new("sh")
             .arg("-c")
             .arg(&self.cmd)
             .arg("--")
             .args(&self.args)
-            .output()
-            .expect("failed to execute process");
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
 
-        if output.status.code().unwrap_or(1) != 0 {
-            info!("{}", output.status);
-        }
+        let mut stdout = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut stderr = BufReader::new(child.stderr.take().unwrap()).lines();
+        let stdin = child.stdin.take().unwrap();
 
-        if !output.stderr.is_empty() {
-            info!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-        }
+        let fut = tokio::join! {
+            child.wait(), handle_io(&mut stdin_rx, stdin, &mut stdout, &mut stderr, output_tx)
+        };
 
-        if !output.stdout.is_empty() {
-            info!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-        }
-
+        fut.0?;
+        debug!("Script {} finished", self.name);
         Ok(())
+    }
+}
+
+async fn handle_io(
+    stdin_rx: &mut WatchReceiver<String>,
+    mut stdin: ChildStdin,
+    stdout: &mut Lines<BufReader<ChildStdout>>,
+    stderr: &mut Lines<BufReader<ChildStderr>>,
+    output_tx: Sender<String>,
+) {
+    loop {
+        tokio::select! {
+            _ = stdin_rx.changed() => {
+                let line = stdin_rx.borrow().clone();
+                if stdin.write_all(line.as_bytes()).await.is_err() {
+                    debug!("Script stdin closed");
+                    break;
+                }
+            }
+
+            line = stdout.next_line() => {
+                if let Ok(Some(line)) = line {
+                    output_tx.send_timeout(line, std::time::Duration::from_millis(100)).await.unwrap();
+                } else {
+                    debug!("Script stdout closed");
+                    break;
+                }
+            }
+
+            line = stderr.next_line() => {
+                if let Ok(Some(line)) = line {
+                    output_tx.send_timeout(line, std::time::Duration::from_millis(100)).await.unwrap();
+                } else {
+                    debug!("Script stderr closed");
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -117,7 +168,7 @@ fn is_executable(path: &Option<String>) -> bool {
         .unwrap_or(false)
 }
 
-pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
+pub fn load_one_from_config(name: &str, config: &Config) -> Result<Script, Error> {
     let path = config
         .get::<Option<String>>(&format!("script.{}.path", name))
         .unwrap_or_default();
@@ -162,21 +213,34 @@ pub fn load_from_config(name: &str, config: &Config) -> Result<Script, Error> {
     ))
 }
 
-pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
+pub fn load_range_from_config(
+    config: &Config,
+    scripts_to_add: Vec<String>,
+) -> Result<Vec<Script>, Error> {
     let mut scripts = Vec::new();
     for (name, _) in config.get_table("script")? {
-        scripts.push(load_from_config(&name, config)?);
+        if scripts_to_add.contains(&name) {
+            scripts.push(load_one_from_config(&name, config)?);
+        }
     }
     Ok(scripts)
 }
 
-impl From<Script> for Task<Script> {
-    fn from(script: Script) -> Self {
-        Task::new(
-            &script.name,
-            script.dependencies.clone(),
-            script.clone(),
-            script.enabled,
-        )
+pub fn load_all_from_config(config: &Config) -> Result<Vec<Script>, Error> {
+    config
+        .get_table("script")
+        .unwrap()
+        .keys()
+        .map(|name| load_one_from_config(name.as_str(), config))
+        .collect()
+}
+
+impl<'a> GraphLike<'a, String> for Script {
+    fn get_key(&'a self) -> &'a String {
+        &self.name
+    }
+
+    fn get_children_keys(&'a self) -> Vec<&'a String> {
+        self.dependencies.iter().collect()
     }
 }

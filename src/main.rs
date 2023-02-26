@@ -1,20 +1,103 @@
-#[macro_use]
-extern crate log;
+use std::process::exit;
 
-use crate::config::{get_config, ConfigType};
-use crate::logger::setup_logger;
+use clap::Parser;
+use log::error;
+use tokio::spawn;
+use tokio::sync::mpsc::Sender as MpscSender;
+use tokio::sync::watch::Receiver as WatchReceiver;
+use tokio::sync::{mpsc, watch};
+use tokio::task::spawn_blocking;
 
-pub(crate) mod config;
-pub(crate) mod error;
-pub(crate) mod logger;
-pub(crate) mod runnable;
+use rdo::resolver::Resolver;
+use rdo::runnable::Runnable;
+use rdo::script::load_all_from_config;
+use rdo::utils::cli::{handle_output, handle_signals, read_stdin, Cli, Commands};
+use rdo::utils::config::get_config_or_default;
+use rdo::utils::error::Error;
+use rdo::utils::logger::setup_logger;
 
-pub mod runner;
-pub mod script;
-pub mod task;
-pub mod task_queue;
+#[tokio::main]
+async fn main() {
+    let args = Cli::parse();
 
-fn main() {
-    let config = get_config(ConfigType::Production).unwrap();
+    let (stdin_tx, stdin_rx) = watch::channel::<String>(String::new());
+    let (stdout_tx, stdout_rx) = mpsc::channel::<String>(1);
+
+    spawn_blocking(move || read_stdin(stdin_tx));
+    spawn(handle_signals());
+    spawn(handle_output(stdout_rx));
+
+    let result = handle_command(stdin_rx, stdout_tx, args).await;
+    match result {
+        Ok(_) => exit(0),
+        Err(e) => {
+            error!("Error: {}", e);
+            exit(1);
+        }
+    }
+}
+
+async fn handle_command(
+    stdin_rx: WatchReceiver<String>,
+    stdout_tx: MpscSender<String>,
+    args: Cli,
+) -> Result<(), Error> {
+    match args.command {
+        None => run(stdin_rx, stdout_tx, None, None).await,
+        Some(command) => match command {
+            Commands::Run {
+                scripts,
+                config: config_path,
+                ..
+            } => run(stdin_rx, stdout_tx, scripts, config_path).await,
+            Commands::List {
+                config: config_path,
+            } => list(config_path),
+        },
+    }
+}
+
+async fn run(
+    stdin_rx: WatchReceiver<String>,
+    stdout_tx: MpscSender<String>,
+    maybe_script_names: Option<String>,
+    maybe_config_path: Option<String>,
+) -> Result<(), Error> {
+    let config = get_config_or_default(maybe_config_path)?;
     setup_logger(&config);
+
+    let scripts = load_all_from_config(&config)?;
+    let resolver = Resolver::new(scripts.iter().collect())?;
+
+    let sorted = match maybe_script_names {
+        Some(script_names) => {
+            let scripts_to_run = script_names
+                .split(',')
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>();
+            resolver.resolve(scripts_to_run)?
+        }
+        None => resolver.resolve_all()?,
+    };
+
+    for script in sorted {
+        if let Err(e) = script.run(stdin_rx.clone(), stdout_tx.clone()).await {
+            error!("Error running script {}: {}", script.name, e);
+            return Err(e);
+        }
+    }
+    Ok(())
+}
+
+fn list(config_path: Option<String>) -> Result<(), Error> {
+    let config = get_config_or_default(config_path)?;
+    let scripts = load_all_from_config(&config)?;
+    let script_names = scripts
+        .iter()
+        .map(|s| s.name.clone())
+        .collect::<Vec<String>>()
+        .join(", ");
+
+    println!("Available scripts: {}", script_names);
+    Ok(())
 }

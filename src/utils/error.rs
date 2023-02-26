@@ -4,9 +4,8 @@ pub enum Error {
     Parse(std::num::ParseIntError),
     Config(config::ConfigError),
     Conversion(String),
-    Task(String),
-    TaskDependencyNotRun(String, String),
-    TaskNotFound(String),
+    ScriptDependencyNotRun(String, String),
+    ScriptNotFound(String),
     Unspecified(String),
 }
 
@@ -60,11 +59,16 @@ impl std::fmt::Display for Error {
             Error::Config(err) => write!(f, "Config error: {}", err),
             Error::Conversion(err) => write!(f, "Conversion error: {}", err),
             Error::Unspecified(err) => write!(f, "Unspecified error: {}", err),
-            Error::Task(err) => write!(f, "Task error: {}", err),
-            Error::TaskDependencyNotRun(task, dep) => {
-                write!(f, "Dependency of {} not run: {}", task, dep)
+            Error::ScriptDependencyNotRun(script, dep) => {
+                write!(f, "Dependency of {} not run: {}", script, dep)
             }
-            Error::TaskNotFound(task) => write!(f, "Task not found: {}", task),
+            Error::ScriptNotFound(script) => write!(f, "script not found: {}", script),
         }
+    }
+}
+
+impl<T> From<tokio::sync::mpsc::error::SendError<T>> for Error {
+    fn from(err: tokio::sync::mpsc::error::SendError<T>) -> Error {
+        Error::Unspecified(err.to_string())
     }
 }

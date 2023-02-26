@@ -1,20 +1,13 @@
-use crate::error::Error;
+use crate::utils::error::Error;
+use async_trait::async_trait;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::watch::Receiver as WatchReceiver;
 
+#[async_trait]
 pub trait Runnable {
-    fn run(&self) -> Result<(), Error>;
-}
-
-impl<F> Runnable for F
-where
-    F: Fn() -> Result<(), Error> + Send + Sync,
-{
-    fn run(&self) -> Result<(), Error> {
-        self()
-    }
-}
-
-impl Runnable for () {
-    fn run(&self) -> Result<(), Error> {
-        Ok(())
-    }
+    async fn run(
+        &self,
+        stdin_rx: WatchReceiver<String>,
+        output_tx: Sender<String>,
+    ) -> Result<(), Error>;
 }
