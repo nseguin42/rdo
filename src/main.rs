@@ -1,10 +1,11 @@
 use clap::Parser;
 use log::info;
-use tokio::runtime::Runtime;
+
+use tokio::spawn;
 use tokio::sync::mpsc::Sender as MpscSender;
 use tokio::sync::watch::{Receiver as WatchReceiver, Sender};
 use tokio::sync::{mpsc, watch};
-use tokio::task;
+use tokio::task::spawn_blocking;
 
 use rdo::resolver::Resolver;
 use rdo::runnable::Runnable;
@@ -13,19 +14,18 @@ use rdo::utils::cli::{Cli, Commands};
 use rdo::utils::config::get_config_or_default;
 use rdo::utils::logger::setup_logger;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Cli::parse();
 
     let (stdin_tx, stdin_rx) = watch::channel::<String>(String::new());
     let (stdout_tx, stdout_rx) = mpsc::channel::<String>(100);
 
-    std::thread::spawn(move || read_stdin(stdin_tx));
+    spawn_blocking(move || read_stdin(stdin_tx));
+    spawn(handle_signals());
+    spawn(handle_output(stdout_rx));
 
-    Runtime::new().unwrap().block_on(async move {
-        task::spawn(handle_signals());
-        task::spawn(handle_output(stdout_rx));
-        handle_command(stdin_rx, stdout_tx, args).await;
-    });
+    handle_command(stdin_rx, stdout_tx, args).await;
 }
 
 fn read_stdin(stdin_tx: Sender<String>) -> String {
