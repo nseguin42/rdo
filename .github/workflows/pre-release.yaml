@@ -3,13 +3,12 @@ name: Pre-release
 on:
   - workflow_dispatch
   - push:
-      tags:
-        - "v*"
-
+      branches:
+        - "main"
 
 jobs:
-  tagged-release:
-    name: Tagged release ${{ matrix.target }}
+  pre-release:
+    name: Pre-release ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -34,7 +33,8 @@ jobs:
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
-          prerelease: false
+          prerelease: true
+          title: "Development Build"
           files: |
             LICENSE
             README.md
