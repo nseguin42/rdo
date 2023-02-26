@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::process::exit;
 
 use tokio::spawn;
 use tokio::sync::mpsc::Sender as MpscSender;
@@ -25,6 +26,7 @@ async fn main() {
     spawn(handle_output(stdout_rx));
 
     handle_command(stdin_rx, stdout_tx, args).await;
+    exit(0);
 }
 
 async fn handle_command(stdin_rx: WatchReceiver<String>, stdout_tx: MpscSender<String>, args: Cli) {
