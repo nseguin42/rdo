@@ -57,5 +57,5 @@ jobs:
       - name: cargo test --verbose
         run: cargo test --verbose
   release:
-    needs: [ pre_job, build ]
+    needs: build
     uses: ./.github/workflows/pre-release.yaml
