@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [ "main" ]
 
 jobs:
   tagged-release:
@@ -16,9 +15,6 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             archive: tar.gz tar.xz tar.zst
     steps:
-      - name: Exit if not on main branch
-        if: endsWith(github.ref, 'main') == false
-        run: exit 0
       - uses: actions/checkout@v3
       - name: Install toolchain
         run: rustup toolchain install stable --profile minimal
