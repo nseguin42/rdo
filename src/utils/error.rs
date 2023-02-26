@@ -1,5 +1,6 @@
 #[derive(Debug)]
 pub enum Error {
+    Logging(String),
     Io(std::io::Error),
     Parse(std::num::ParseIntError),
     Config(config::ConfigError),
@@ -63,6 +64,7 @@ impl std::fmt::Display for Error {
                 write!(f, "Dependency of {} not run: {}", script, dep)
             }
             Error::ScriptNotFound(script) => write!(f, "script not found: {}", script),
+            Error::Logging(err) => write!(f, "Logging error: {}", err),
         }
     }
 }
