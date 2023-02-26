@@ -21,12 +21,12 @@ jobs:
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
       - name: cargo build --release --target ${{ matrix.target }}
-        run: cargo build -release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
       - name: package
         run: |
           mkdir -p release
           for archive in ${{ matrix.archive }}; do
-            cmd="tar -cJf release/${{ matrix.target }}.tar.${archive} -C target/${{ matrix.target }}/release/ ${{ github.event.repository.name }}"
+            cmd="tar -cJf release/${{ matrix.target }}.${archive} -C target/${{ matrix.target }}/release/ ${{ github.event.repository.name }}"
             echo $cmd
             $cmd
           done
