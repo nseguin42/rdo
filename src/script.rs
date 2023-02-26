@@ -94,7 +94,7 @@ impl Runnable for Script {
         mut stdin_rx: WatchReceiver<String>,
         output_tx: Sender<String>,
     ) -> Result<(), Error> {
-        debug!("Starting script: {}", self.name);
+        info!("Starting script: {}", self.name);
         let mut child = Command::new("sh")
             .arg("-c")
             .arg(&self.cmd)
