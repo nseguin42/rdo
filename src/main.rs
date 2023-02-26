@@ -1,16 +1,15 @@
 use clap::Parser;
-use log::info;
 
 use tokio::spawn;
 use tokio::sync::mpsc::Sender as MpscSender;
-use tokio::sync::watch::{Receiver as WatchReceiver, Sender};
+use tokio::sync::watch::Receiver as WatchReceiver;
 use tokio::sync::{mpsc, watch};
 use tokio::task::spawn_blocking;
 
 use rdo::resolver::Resolver;
 use rdo::runnable::Runnable;
 use rdo::script::load_all_from_config;
-use rdo::utils::cli::{Cli, Commands};
+use rdo::utils::cli::{handle_output, handle_signals, read_stdin, Cli, Commands};
 use rdo::utils::config::get_config_or_default;
 use rdo::utils::logger::setup_logger;
 
@@ -26,16 +25,6 @@ async fn main() {
     spawn(handle_output(stdout_rx));
 
     handle_command(stdin_rx, stdout_tx, args).await;
-}
-
-fn read_stdin(stdin_tx: Sender<String>) -> String {
-    let mut buffer = String::new();
-    let stdin = std::io::stdin();
-    loop {
-        stdin.read_line(&mut buffer).unwrap();
-        stdin_tx.send(buffer.clone()).unwrap();
-        buffer.clear();
-    }
 }
 
 async fn handle_command(stdin_rx: WatchReceiver<String>, stdout_tx: MpscSender<String>, args: Cli) {
@@ -92,16 +81,4 @@ fn list(config_path: Option<String>) {
         .join(", ");
 
     println!("Available scripts: {}", script_names);
-}
-
-async fn handle_signals() {
-    tokio::signal::ctrl_c().await.unwrap();
-    info!("Received SIGINT, exiting");
-    std::process::exit(0);
-}
-
-async fn handle_output(mut output_rx: tokio::sync::mpsc::Receiver<String>) {
-    while let Some(line) = output_rx.recv().await {
-        println!("{}", line);
-    }
 }
