@@ -1,6 +1,7 @@
-use clap::Parser;
 use std::process::exit;
 
+use clap::Parser;
+use log::error;
 use tokio::spawn;
 use tokio::sync::mpsc::Sender as MpscSender;
 use tokio::sync::watch::Receiver as WatchReceiver;
@@ -12,6 +13,7 @@ use rdo::runnable::Runnable;
 use rdo::script::load_all_from_config;
 use rdo::utils::cli::{handle_output, handle_signals, read_stdin, Cli, Commands};
 use rdo::utils::config::get_config_or_default;
+use rdo::utils::error::Error;
 use rdo::utils::logger::setup_logger;
 
 #[tokio::main]
@@ -25,11 +27,21 @@ async fn main() {
     spawn(handle_signals());
     spawn(handle_output(stdout_rx));
 
-    handle_command(stdin_rx, stdout_tx, args).await;
-    exit(0);
+    let result = handle_command(stdin_rx, stdout_tx, args).await;
+    match result {
+        Ok(_) => exit(0),
+        Err(e) => {
+            error!("Error: {}", e);
+            exit(1);
+        }
+    }
 }
 
-async fn handle_command(stdin_rx: WatchReceiver<String>, stdout_tx: MpscSender<String>, args: Cli) {
+async fn handle_command(
+    stdin_rx: WatchReceiver<String>,
+    stdout_tx: MpscSender<String>,
+    args: Cli,
+) -> Result<(), Error> {
     match args.command {
         None => run(stdin_rx, stdout_tx, None, None).await,
         Some(command) => match command {
@@ -50,12 +62,12 @@ async fn run(
     stdout_tx: MpscSender<String>,
     maybe_script_names: Option<String>,
     maybe_config_path: Option<String>,
-) {
-    let config = get_config_or_default(maybe_config_path).unwrap();
+) -> Result<(), Error> {
+    let config = get_config_or_default(maybe_config_path)?;
     setup_logger(&config);
 
-    let scripts = load_all_from_config(&config).unwrap();
-    let resolver = Resolver::new(scripts.iter().collect()).unwrap();
+    let scripts = load_all_from_config(&config)?;
+    let resolver = Resolver::new(scripts.iter().collect())?;
 
     let sorted = match maybe_script_names {
         Some(script_names) => {
@@ -63,19 +75,23 @@ async fn run(
                 .split(',')
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
-            resolver.resolve(scripts_to_run).unwrap()
+            resolver.resolve(scripts_to_run)?
         }
-        None => resolver.resolve_all().unwrap(),
+        None => resolver.resolve_all()?,
     };
 
     for script in sorted {
-        script.run(stdin_rx.clone(), stdout_tx.clone()).await;
+        if let Err(e) = script.run(stdin_rx.clone(), stdout_tx.clone()).await {
+            error!("Error running script {}: {}", script.name, e);
+            return Err(e);
+        }
     }
+    Ok(())
 }
 
-fn list(config_path: Option<String>) {
-    let config = get_config_or_default(config_path).unwrap();
-    let scripts = load_all_from_config(&config).unwrap();
+fn list(config_path: Option<String>) -> Result<(), Error> {
+    let config = get_config_or_default(config_path)?;
+    let scripts = load_all_from_config(&config)?;
     let script_names = scripts
         .iter()
         .map(|s| s.name.clone())
@@ -83,4 +99,5 @@ fn list(config_path: Option<String>) {
         .join(", ");
 
     println!("Available scripts: {}", script_names);
+    Ok(())
 }

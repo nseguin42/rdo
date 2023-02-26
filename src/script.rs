@@ -89,7 +89,11 @@ fn load_script_file(path: &Option<String>) -> Result<String, Error> {
 
 #[async_trait]
 impl Runnable for Script {
-    async fn run(&self, mut stdin_rx: WatchReceiver<String>, output_tx: Sender<String>) {
+    async fn run(
+        &self,
+        mut stdin_rx: WatchReceiver<String>,
+        output_tx: Sender<String>,
+    ) -> Result<(), Error> {
         debug!("Starting script: {}", self.name);
         let mut child = Command::new("sh")
             .arg("-c")
@@ -110,9 +114,9 @@ impl Runnable for Script {
             child.wait(), handle_io(&mut stdin_rx, stdin, &mut stdout, &mut stderr, output_tx)
         };
 
-        fut.0.unwrap();
-
+        fut.0?;
         debug!("Script {} finished", self.name);
+        Ok(())
     }
 }
 
