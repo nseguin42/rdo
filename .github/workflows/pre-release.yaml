@@ -1,10 +1,8 @@
 name: Pre-release
 
 on:
-  push:
-    branches:
-      - "main"
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   pre-release:
@@ -33,7 +31,7 @@ jobs:
           done
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          repo_token: "${{ secrets.RELEASE_PAT }}"
           automatic_release_tag: "latest"
           prerelease: true
           title: "Development Build"
