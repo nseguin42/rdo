@@ -1,11 +1,12 @@
 [package]
 name = "rdo"
 version = "0.2.1"
-edition = "2021"
 authors = ["nseguin42"]
+edition = "2021"
 description = "A command-line tool for running commands with dependencies."
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+readme = "README.md"
+repository = "https://github.com/nseguin42/rdo"
+license-file = "LICENSE"
 
 [dependencies]
 async-trait = "0.1.64"
