@@ -78,10 +78,10 @@ INFO rdo::script > stdout: test_1 | Run after all other tests.
     - Package update script
     - With retries
     - With timeout
-- [ ] Add interactive console with streaming output
+- [x] Add interactive console with streaming output
 - [ ] Add support for running scripts in parallel
 - [ ] Add more complex dependency logic
     - `IF` / `ELSE` / `AND` / `OR` / `NOT` syntax
     - "Necessary" and "sufficient" syntax
 - [ ] Post execution summary
-- [ ] Interruptible execution
+- [x] Interruptible execution
