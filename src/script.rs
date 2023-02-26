@@ -90,7 +90,7 @@ fn load_script_file(path: &Option<String>) -> Result<String, Error> {
 #[async_trait]
 impl Runnable for Script {
     async fn run(&self, mut stdin_rx: WatchReceiver<String>, output_tx: Sender<String>) {
-        debug!("Started script: {}", self.name);
+        debug!("Starting script: {}", self.name);
         let mut child = Command::new("sh")
             .arg("-c")
             .arg(&self.cmd)
