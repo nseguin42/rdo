@@ -1,6 +1,6 @@
 [package]
 name = "rdo"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["nseguin42"]
 edition = "2021"
 description = "A command-line tool for running commands with dependencies."
