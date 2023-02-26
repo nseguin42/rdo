@@ -29,16 +29,15 @@ jobs:
             echo $cmd
             $cmd
           done
-      - uses: "softprops/action-gh-release@v1"
-        if: startsWith(github.ref, 'refs/tags/')
+      - uses: "marvinpinto/action-automatic-releases@latest"
         with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
           files: |
             LICENSE
             README.md
             release/${{ matrix.target }}.tar.gz
             release/${{ matrix.target }}.tar.xz
             release/${{ matrix.target }}.tar.zst
-          token: ${{ secrets.RELEASE_PAT }}
-          prerelease: true
-          generate_release_notes: true
-          name: "Development Build"

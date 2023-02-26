@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - "v*"
 
 jobs:
   tagged-release:
@@ -15,6 +16,9 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             archive: tar.gz tar.xz tar.zst
     steps:
+      - name: Exit if not on main branch
+        if: endsWith(github.ref, 'main') == false
+        run: exit 0
       - uses: actions/checkout@v3
       - name: Install toolchain
         run: rustup toolchain install stable --profile minimal
@@ -29,13 +33,13 @@ jobs:
             echo $cmd
             $cmd
           done
-      - uses: "softprops/action-gh-release@v1"
-        if: startsWith(github.ref, 'refs/tags/')
+      - uses: "marvinpinto/action-automatic-releases@latest"
         with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
           files: |
             LICENSE
             README.md
             release/${{ matrix.target }}.tar.gz
             release/${{ matrix.target }}.tar.xz
             release/${{ matrix.target }}.tar.zst
-          token: ${{ secrets.RELEASE_PAT }}
