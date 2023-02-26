@@ -103,8 +103,7 @@ impl Runnable for Script {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            .spawn()
-            .unwrap();
+            .spawn()?;
 
         let mut stdout = BufReader::new(child.stdout.take().unwrap()).lines();
         let mut stderr = BufReader::new(child.stderr.take().unwrap()).lines();
