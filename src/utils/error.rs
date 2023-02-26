@@ -7,6 +7,8 @@ pub enum Error {
     ScriptNotFound(String),
     Unspecified(String),
     StdinClosed,
+    StdoutClosed,
+    StderrClosed,
     LoggingSetupFailed,
 }
 
@@ -53,6 +55,8 @@ impl std::fmt::Display for Error {
             Error::ScriptNotFound(script) => write!(f, "script not found: {}", script),
             Error::LoggingSetupFailed => write!(f, "Failed setting up logger"),
             Error::StdinClosed => write!(f, "Stdin closed"),
+            Error::StdoutClosed => write!(f, "Stdout closed"),
+            Error::StderrClosed => write!(f, "Stderr closed"),
         }
     }
 }

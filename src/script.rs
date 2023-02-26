@@ -110,49 +110,102 @@ impl Runnable for Script {
         let mut stderr = BufReader::new(child.stderr.take().unwrap()).lines();
         let stdin = child.stdin.take().unwrap();
 
-        let fut = tokio::join! {
-            child.wait(), handle_io(&mut stdin_rx, stdin, &mut stdout, &mut stderr, output_tx)
-        };
-
-        fut.0?;
-        debug!("Script {} finished", self.name);
-        Ok(())
+        tokio::select! {
+            e = handle_io(&mut stdin_rx, stdin, &mut stdout, &mut stderr, output_tx) => {
+                e
+            }
+            _ = child.wait() => {
+                debug!("Script {} finished", self.name);
+                Ok(())
+            }
+        }
     }
 }
 
+/// Pass stdin into the script and return stdout/stderr through output_tx.
 async fn handle_io(
     stdin_rx: &mut WatchReceiver<String>,
-    mut stdin: ChildStdin,
+    stdin: ChildStdin,
     stdout: &mut Lines<BufReader<ChildStdout>>,
     stderr: &mut Lines<BufReader<ChildStderr>>,
     output_tx: Sender<String>,
-) {
+) -> Result<(), Error> {
+    tokio::select! {
+        r = handle_stdin(stdin_rx, stdin) => {
+            r
+        }
+        r = handle_stdout(stdout, &output_tx) => {
+            r
+        }
+        r = handle_stderr(stderr, &output_tx) => {
+            r
+        }
+    }
+}
+
+async fn handle_stdin(
+    stdin_rx: &mut WatchReceiver<String>,
+    mut stdin: ChildStdin,
+) -> Result<(), Error> {
     loop {
-        tokio::select! {
-            _ = stdin_rx.changed() => {
-                let line = stdin_rx.borrow().clone();
-                if stdin.write_all(line.as_bytes()).await.is_err() {
-                    debug!("Script stdin closed");
-                    break;
-                }
+        let changed = stdin_rx.changed().await;
+        match changed {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Script stdin closed: {}", e);
+                return Err(Error::StdinClosed);
             }
+        }
 
-            line = stdout.next_line() => {
-                if let Ok(Some(line)) = line {
-                    output_tx.send_timeout(line, std::time::Duration::from_millis(100)).await.unwrap();
-                } else {
-                    debug!("Script stdout closed");
-                    break;
-                }
+        let line = stdin_rx.borrow().clone();
+        let result = stdin.write_all(line.as_bytes()).await;
+        if result.is_err() {
+            return Err(Error::from(result.err().unwrap()));
+        }
+    }
+}
+
+async fn handle_stdout(
+    stdout: &mut Lines<BufReader<ChildStdout>>,
+    output_tx: &Sender<String>,
+) -> Result<(), Error> {
+    loop {
+        let line = stdout.next_line().await?;
+
+        match line {
+            Some(line) => {
+                output_tx
+                    .send_timeout(line, std::time::Duration::from_millis(100))
+                    .await
+                    .unwrap_or_else(|e| {
+                        error!("Script stdout send error: {}", e);
+                    });
             }
+            None => {
+                return Ok(());
+            }
+        }
+    }
+}
 
-            line = stderr.next_line() => {
-                if let Ok(Some(line)) = line {
-                    output_tx.send_timeout(line, std::time::Duration::from_millis(100)).await.unwrap();
-                } else {
-                    debug!("Script stderr closed");
-                    break;
-                }
+async fn handle_stderr(
+    stderr: &mut Lines<BufReader<ChildStderr>>,
+    output_tx: &Sender<String>,
+) -> Result<(), Error> {
+    loop {
+        let line = stderr.next_line().await?;
+
+        match line {
+            Some(line) => {
+                output_tx
+                    .send_timeout(line, std::time::Duration::from_millis(100))
+                    .await
+                    .unwrap_or_else(|e| {
+                        error!("Script stderr send error: {}", e);
+                    });
+            }
+            None => {
+                return Ok(());
             }
         }
     }
