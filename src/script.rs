@@ -1,9 +1,16 @@
+use std::io::BufRead;
 use std::io::Read;
 use std::os::unix::prelude::PermissionsExt;
-use std::process::Command;
+use std::process::Stdio;
 
+use async_trait::async_trait;
 use config::Config;
 use serde::{Deserialize, Serialize};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, Lines};
+use tokio::process::{ChildStderr, ChildStdin, ChildStdout, Command};
+use tokio::sync::mpsc::Sender;
+use tokio::sync::watch::Receiver as WatchReceiver;
+use tokio::task;
 
 use crate::runnable::Runnable;
 use crate::utils::error::Error;
@@ -81,29 +88,70 @@ fn load_script_file(path: &Option<String>) -> Result<String, Error> {
     Ok(contents)
 }
 
+#[async_trait]
 impl Runnable for Script {
-    fn run(&self) -> Result<(), Error> {
-        let output = Command::new("bash")
+    async fn run(&self, mut stdin_rx: WatchReceiver<String>, output_tx: Sender<String>) {
+        debug!("Started script: {}", self.name);
+        let mut child = Command::new("sh")
             .arg("-c")
             .arg(&self.cmd)
             .arg("--")
             .args(&self.args)
-            .output()
-            .expect("failed to execute process");
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
 
-        if output.status.code().unwrap_or(1) != 0 {
-            info!("{}", output.status);
+        let mut stdout = BufReader::new(child.stdout.take().unwrap()).lines();
+        let mut stderr = BufReader::new(child.stderr.take().unwrap()).lines();
+        let stdin = child.stdin.take().unwrap();
+
+        let fut = tokio::join! {
+            child.wait(), handle_io(&mut stdin_rx, stdin, &mut stdout, &mut stderr, output_tx)
+        };
+
+        fut.0.unwrap();
+
+        debug!("Script {} finished", self.name);
+    }
+}
+
+async fn handle_io(
+    stdin_rx: &mut WatchReceiver<String>,
+    mut stdin: ChildStdin,
+    stdout: &mut Lines<BufReader<ChildStdout>>,
+    stderr: &mut Lines<BufReader<ChildStderr>>,
+    output_tx: Sender<String>,
+) {
+    loop {
+        tokio::select! {
+            _ = stdin_rx.changed() => {
+                let line = stdin_rx.borrow().clone();
+                if stdin.write_all(line.as_bytes()).await.is_err() {
+                    debug!("Script stdin closed");
+                    break;
+                }
+            }
+
+            line = stdout.next_line() => {
+                if let Ok(Some(line)) = line {
+                    output_tx.send_timeout(line, std::time::Duration::from_millis(100)).await.unwrap();
+                } else {
+                    debug!("Script stdout closed");
+                    break;
+                }
+            }
+
+            line = stderr.next_line() => {
+                if let Ok(Some(line)) = line {
+                    output_tx.send_timeout(line, std::time::Duration::from_millis(100)).await.unwrap();
+                } else {
+                    debug!("Script stderr closed");
+                    break;
+                }
+            }
         }
-
-        if !output.stderr.is_empty() {
-            info!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-        }
-
-        if !output.stdout.is_empty() {
-            info!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-        }
-
-        Ok(())
     }
 }
 

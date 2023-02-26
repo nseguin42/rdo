@@ -1,61 +1,62 @@
 use clap::Parser;
-use log::error;
-use tokio::sync::mpsc::Sender;
+use tokio::runtime::Runtime;
+use tokio::sync::watch;
+use tokio::sync::watch::Receiver as WatchReceiver;
+use tokio::task;
 
-use rdo::console::{create_output_channel, setup_output, setup_signal_handler, OutputLine};
 use rdo::resolver::Resolver;
-use rdo::runner::Runner;
-use rdo::script::{load_all_from_config, Script};
+use rdo::runnable::Runnable;
+use rdo::script::load_all_from_config;
 use rdo::utils::cli::{Cli, Commands};
 use rdo::utils::config::get_config_or_default;
 use rdo::utils::error::Error;
 use rdo::utils::logger::setup_logger;
 
-#[tokio::main]
-async fn main() {
-    setup_logger(None);
-    let output_channel = create_output_channel().await;
+fn main() {
     let args = Cli::parse();
 
-    setup_signal_handler();
-    setup_output(output_channel.rx);
+    let (stdin_tx, stdin_rx) = watch::channel::<String>(String::new());
 
-    if let Err(e) = handle_command(output_channel.tx, args).await {
-        error!("Error: {}", e);
-        std::process::exit(1);
-    }
+    // Use a blocking thread for stdin and and pass it to the async runtime
+    std::thread::spawn(move || {
+        let mut buffer = String::new();
+        let stdin = std::io::stdin();
+        loop {
+            stdin.read_line(&mut buffer).unwrap();
+            stdin_tx.send(buffer.clone()).unwrap();
+            buffer.clear();
+        }
+    });
+
+    Runtime::new()
+        .unwrap()
+        .block_on(async move { handle_command(stdin_rx, args).await });
 }
 
-async fn handle_command(output: Sender<OutputLine>, args: Cli) -> Result<(), Error> {
+async fn handle_command(rx: WatchReceiver<String>, args: Cli) {
     match args.command {
-        None => {
-            run(output, None, None).await?;
-        }
+        None => run(rx, None, None).await.unwrap(),
         Some(command) => match command {
             Commands::Run {
                 scripts,
                 config: config_path,
                 ..
-            } => {
-                run(output, scripts, config_path).await?;
-            }
+            } => run(rx, scripts, config_path).await.unwrap(),
             Commands::List {
                 config: config_path,
-            } => {
-                list(config_path)?;
-            }
+            } => list(config_path).unwrap(),
         },
     }
-
-    Ok(())
 }
 
 async fn run(
-    output: Sender<OutputLine>,
+    stdin_rx: WatchReceiver<String>,
     maybe_script_names: Option<String>,
     maybe_config_path: Option<String>,
 ) -> Result<(), Error> {
     let config = get_config_or_default(maybe_config_path)?;
+    setup_logger(&config);
+
     let scripts = load_all_from_config(&config)?;
     let resolver = Resolver::new(scripts.iter().collect())?;
 
@@ -70,7 +71,19 @@ async fn run(
         None => resolver.resolve_all()?,
     };
 
-    Runner::<Script>::new(sorted).run(output).await
+    let (output_tx, mut output_rx) = tokio::sync::mpsc::channel(100);
+
+    task::spawn(async move {
+        while let Some(line) = output_rx.recv().await {
+            println!("{}", line);
+        }
+    });
+
+    for script in sorted {
+        script.run(stdin_rx.clone(), output_tx.clone()).await;
+    }
+
+    Ok(())
 }
 
 fn list(config_path: Option<String>) -> Result<(), Error> {
