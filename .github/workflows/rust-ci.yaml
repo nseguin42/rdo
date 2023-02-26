@@ -58,7 +58,7 @@ jobs:
       - name: cargo test --verbose
         run: cargo test --verbose
   release:
-    needs: pre_job
+    needs: [ pre_job, build ]
     if: needs.pre_job.outputs.should_skip != 'true' || !fromJSON(needs.pre_job.outputs.paths_result).release.should_skip
     runs-on: ubuntu-latest
     steps:
