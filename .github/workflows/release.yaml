@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir -p release
           for archive in ${{ matrix.archive }}; do
-            cmd="tar -cJf release/${{ matrix.target }}.${archive} -C target/${{ matrix.target }}/release/"
+            cmd="tar -cJf release/${{ matrix.target }}.tar.${archive} -C target/${{ matrix.target }}/release/ ${{ github.event.repository.name }}"
             echo $cmd
             $cmd
           done
