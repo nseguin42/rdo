@@ -21,7 +21,7 @@ async fn main() {
     let args = Cli::parse();
 
     let (stdin_tx, stdin_rx) = watch::channel::<String>(String::new());
-    let (stdout_tx, stdout_rx) = mpsc::channel::<String>(100);
+    let (stdout_tx, stdout_rx) = mpsc::channel::<String>(1);
 
     spawn_blocking(move || read_stdin(stdin_tx));
     spawn(handle_signals());
