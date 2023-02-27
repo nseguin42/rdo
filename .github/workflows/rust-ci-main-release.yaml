@@ -1,0 +1,39 @@
+name: Rust CI (main, release)
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tagged-release:
+    name: Tagged release ${{ matrix.target }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            archive: tar.gz tar.xz tar.zst
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          mkdir -p release
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.target }}
+          path: release
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            LICENSE
+            README.md
+            release/${{ matrix.target }}.tar.gz
+            release/${{ matrix.target }}.tar.xz
+            release/${{ matrix.target }}.tar.zst
+          token: ${{ secrets.RELEASE_PAT }}
