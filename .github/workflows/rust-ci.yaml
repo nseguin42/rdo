@@ -41,16 +41,22 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - uses: ./.github/workflows/rust-lint.yaml
+      - uses: nseguin42/rdo/.github/workflows/rust-lint.yaml
 
       - name: Build (Development)
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-        uses: ./.github/workflows/rust-build-and-test.yaml
+        uses: nseguin42/rdo/.github/workflows/rust-build-and-test.yaml
         with:
           build_type: dev
 
       - name: Build (Release)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: ./.github/workflows/rust-build-and-release.yaml
+        uses: nseguin42/rdo/.github/workflows/rust-build-and-release.yaml
+        secrets: inherit
         with:
           build_type: release
+
+      - name: Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: nseguin42/rdo/.github/workflows/rust-release.yaml
+        secrets: inherit
