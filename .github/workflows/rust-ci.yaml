@@ -10,32 +10,11 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  startup:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      paths_result: ${{ steps.skip_check.outputs.paths_result }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          skip_after_successful_duplicate: 'true'
-          do_not_skip: '["push"]'
-          paths_ignore: '[ "README.md", "LICENSE", ".gitignore", ".github/**", ".rustfmt.toml" ]'
-          paths_filter: |
-            build:
-              paths:
-                - Cargo.toml
-                - Cargo.lock
-                - src/**
-                - tests/**
   rust_ci_dev_build:
-    needs: startup
-    if: github.ref == 'refs/heads/dev' && (needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip)
+    if: github.ref == 'refs/heads/dev'
     uses: ./.github/workflows/rust-ci-dev-build.yaml
 
   rust_ci_main_build:
-    needs: startup
-    if: github.ref == 'refs/heads/main' && (needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip)
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/rust-ci-main-build.yaml
     secrets: inherit
