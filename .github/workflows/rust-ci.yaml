@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
+  startup:
     runs-on: ubuntu-latest
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
@@ -29,7 +29,7 @@ jobs:
                 - Cargo.lock
                 - src/**
                 - tests/**
-  setup:
+  rust_setup:
     needs: check
     if: needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip
     runs-on: ubuntu-latest
@@ -39,6 +39,10 @@ jobs:
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
 
+  lint:
+    needs: setup
+    uses: ./.github/workflows/rust-lint.yaml
+  
   build_dev:
     needs: setup
     if: github.ref == 'refs/heads/dev'

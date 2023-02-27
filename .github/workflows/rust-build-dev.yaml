@@ -8,9 +8,6 @@ on:
         required: true
 
 jobs:
-  lint:
-    uses: ./.github/workflows/rust-lint.yaml
-
   build:
     needs: lint
     runs-on: ubuntu-latest
