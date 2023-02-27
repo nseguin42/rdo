@@ -30,7 +30,7 @@ jobs:
                 - src/**
                 - tests/**
   run_ci:
-    needs: pre_job
+    needs: check
     if: needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip
     runs-on: ubuntu-latest
     steps:
