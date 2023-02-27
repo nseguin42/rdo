@@ -41,7 +41,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - uses: ./.github/actions/rust-lint.yaml
+      - uses: ./.github/workflows/rust-lint.yaml
 
       - name: Build (Development)
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
