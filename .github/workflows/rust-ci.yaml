@@ -45,8 +45,8 @@ jobs:
     uses: ./.github/workflows/rust-build-dev.yaml
     secrets: inherit
 
-  build_prod:
+  build_main:
     needs: setup
     if: github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/rust-build-prod.yaml
+    uses: ./.github/workflows/rust-build-main.yaml
     secrets: inherit
