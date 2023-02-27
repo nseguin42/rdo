@@ -50,11 +50,6 @@ jobs:
       - name: Build (Release)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: ./.github/workflows/rust-build-and-release.yaml
-        secrets: inherit
         with:
           build_type: release
-
-      - name: Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: ./.github/workflows/rust-release.yaml
-        secrets: inherit
+          release_pat: ${{ secrets.RELEASE_PAT }}
