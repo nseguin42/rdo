@@ -9,7 +9,6 @@ on:
 
 jobs:
   build:
-    needs: lint
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'
     steps:
