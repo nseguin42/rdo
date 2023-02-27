@@ -31,11 +31,11 @@ jobs:
                 - tests/**
   rust_ci_dev_build:
     needs: startup
-    if: needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip && github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/dev' && (needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip)
     uses: ./.github/workflows/rust-ci-dev-build.yaml
 
   rust_ci_main_build:
     needs: startup
-    if: needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip)
     uses: ./.github/workflows/rust-ci-main-build.yaml
     secrets: inherit
