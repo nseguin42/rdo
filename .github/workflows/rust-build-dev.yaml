@@ -2,11 +2,19 @@ name: Rust Build/Test
 
 on:
   workflow_call:
+    secrets:
+      release_pat:
+        description: 'GitHub PAT to use for releases'
+        required: true
 
 jobs:
+  lint:
+    uses: ./.github/workflows/rust-lint.yaml
+
   build:
-    needs: pre_job
+    needs: lint
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
     steps:
       - uses: ./.github/workflows/rust-lint.yaml
       - name: cargo build --verbose
