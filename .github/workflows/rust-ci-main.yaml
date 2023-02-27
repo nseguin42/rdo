@@ -27,24 +27,11 @@ jobs:
                 - Cargo.lock
                 - src/**
                 - tests/**
-  rust_setup:
-    needs: startup
-    if: needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal
-      - uses: Swatinem/rust-cache@v2
-
-  lint:
-    needs: rust_setup
-    uses: ./.github/actions/rust-lint.yaml
 
   tagged-release:
-    needs: lint
+    needs: startup
     name: Tagged release ${{ matrix.target }}
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') && (needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -54,6 +41,10 @@ jobs:
             archive: tar.gz tar.xz tar.zst
 
     steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --release --target ${{ matrix.target }} --locked
       - uses: ./.github/workflows/bump-tag.yaml
