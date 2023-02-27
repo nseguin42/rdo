@@ -1,0 +1,46 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+
+  tagged-release:
+    name: Tagged release ${{ matrix.target }}
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            archive: tar.gz tar.xz tar.zst
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} --locked
+      - name: Package
+        run: |
+          mkdir -p release
+          for archive in ${{ matrix.archive }}; do
+            cmd="tar -cJf release/${{ matrix.target }}.${archive} -C target/${{ matrix.target }}/release/ ."
+            echo $cmd
+            $cmd
+          done
+      - name: Create an incremental release
+        uses: aurestic/incremental-create-release@master
+        with:
+          flag_branch: false
+          message: Bump version to ${{ steps.bump.outputs.new_tag }}
+          prev_tag: 'v'
+          update_odoo_module_version: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

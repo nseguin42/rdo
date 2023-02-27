@@ -2,9 +2,9 @@ name: Rust CI
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "dev" "main" ]
   pull_request:
-    branches: [ "dev" ]
+    branches: [ "dev" "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -66,15 +66,3 @@ jobs:
         run: cargo build --verbose
       - name: cargo test --verbose
         run: cargo test --verbose
-      - uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            LICENSE
-            README.md
-            release/${{ matrix.target }}.tar.gz
-            release/${{ matrix.target }}.tar.xz
-            release/${{ matrix.target }}.tar.zst
-          token: ${{ secrets.RELEASE_PAT }}
-          prerelease: true
-          generate_release_notes: true
-          name: "Development Build"

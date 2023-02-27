@@ -8,30 +8,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  startup:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      paths_result: ${{ steps.skip_check.outputs.paths_result }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          skip_after_successful_duplicate: 'true'
-          do_not_skip: '["push"]'
-          paths_ignore: '[ "README.md", "LICENSE", ".gitignore", ".github/**", ".rustfmt.toml" ]'
-          paths_filter: |
-            build:
-              paths:
-                - Cargo.toml
-                - Cargo.lock
-                - src/**
-                - tests/**
-
   tagged-release:
-    needs: startup
     name: Tagged release ${{ matrix.target }}
-    if: startsWith(github.ref, 'refs/tags/') && (needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip)
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -57,15 +36,6 @@ jobs:
             echo $cmd
             $cmd
           done
-      - name: Create an incremental release
-        uses: aurestic/incremental-create-release@master
-        with:
-          flag_branch: false
-          message: Bump version to ${{ steps.bump.outputs.new_tag }}
-          prev_tag: 'v'
-          update_odoo_module_version: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: softprops/action-gh-release@v1
         with:
           files: |
