@@ -1,8 +1,8 @@
 name: Bump Tag
 
 on:
-  push:
-    branches: 'main'
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Create an incremental release
-        uses: aurestic/incrementarl-create-release@master
+        uses: aurestic/incremental-create-release@master
         with:
           flag_branch: false
           message: Bump version to ${{ steps.bump.outputs.new_tag }}

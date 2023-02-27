@@ -43,9 +43,6 @@ jobs:
 
       - uses: ./.github/actions/rust-lint.yaml
 
-      - uses: ./.github/workflows/bump-tag.yaml
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
       - name: Build (Development)
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         uses: ./.github/workflows/rust-build-and-test.yaml

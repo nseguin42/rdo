@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }} --locked
+      - uses: ./.github/workflows/bump-tag.yaml
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       - name: Package
         run: |
           mkdir -p release
