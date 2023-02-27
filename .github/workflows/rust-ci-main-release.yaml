@@ -1,9 +1,7 @@
 name: Rust CI (main, release)
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
