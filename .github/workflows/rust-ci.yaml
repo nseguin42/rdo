@@ -18,3 +18,11 @@ jobs:
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/rust-ci-main-build.yaml
     secrets: inherit
+
+  rust_ci_main_release:
+    needs: [ rust_ci_main_build ]
+    if: startswith(github.ref, 'refs/tags/')
+    uses: ./.github/workflows/rust-ci-main-release.yaml
+    with:
+      tag_name: ${{ github.ref }}
+    secrets: inherit

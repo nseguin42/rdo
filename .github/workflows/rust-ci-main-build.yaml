@@ -34,7 +34,7 @@ jobs:
   build:
     needs: startup
     if: needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip
-    name: Tagged release ${{ matrix.target }}
+    name: Build release artifacts - ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
