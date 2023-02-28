@@ -2,7 +2,8 @@ name: Rust CI (commit)
 
 on:
   pull_request:
-    - types: [ opened, synchronize, reopened ]
+    types: [ opened, synchronize, reopened ]
+
 env:
   CARGO_TERM_COLOR: always
 
