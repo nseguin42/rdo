@@ -32,6 +32,12 @@ jobs:
     needs: startup
     if: needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            archive: tar.gz tar.xz tar.zst
     steps:
       - uses: actions/checkout@v3
       - name: Install Rust toolchain
@@ -41,11 +47,17 @@ jobs:
         run: cargo test
       - name: cargo build --release --locked --all-features
         run: cargo build --release --locked --all-features
+      - name: package
+        run: |
+          mkdir -p target/release
+          cmd="tar -cJf target/release/${{ matrix.target }}.tar.xz -C target/release/ ."
+          echo $cmd
+          $cmd
       - name: upload release artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: artifacts
+          name: dev-release-artifacts
           path: |
-            target/release
+            target/release/${{ matrix.target }}.*
             LICENSE
             README.md
