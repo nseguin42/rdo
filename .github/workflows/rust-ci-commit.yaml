@@ -1,0 +1,12 @@
+name: Rust CI (commit)
+
+on:
+  pull_request:
+    - types: [ opened, synchronize, reopened ]
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust_lint:
+    - name: rust-clippy-check
+      uses: actions-rs/clippy-check@v1.0.7
