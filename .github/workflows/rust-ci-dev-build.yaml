@@ -1,7 +1,9 @@
 name: Rust CI (dev, build)
 
 on:
-  workflow_call:
+  push:
+    branches:
+      - dev
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,7 +28,8 @@ jobs:
                 - Cargo.lock
                 - src/**
                 - tests/**
-  rust_ci_dev:
+
+  build:
     needs: startup
     if: needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip
     runs-on: ubuntu-latest
@@ -35,31 +38,15 @@ jobs:
       - name: Install Rust toolchain
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
-      - name: Install linting tools
-        run: |
-          rustup component add clippy
-          rustup component add rustfmt
-          cargo install cargo-audit clippy-sarif sarif-fmt
-      - name: cargo check --verbose
-        run: cargo check --verbose
-      - name: cargo fmt --verbose -- --check
-        run: cargo fmt --verbose -- --check
-      - name: cargo clippy
-          --all-features
-          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
-        run: cargo clippy
-          --all-features
-          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
-      - name: cargo audit
-        run: cargo audit
-      - name: cargo doc --verbose
-        run: cargo doc --verbose
-      - name: Upload clippy analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v2.2.5
+      - name: cargo test
+        run: cargo test
+      - name: cargo build --release --locked --all-features
+        run: cargo build --release --locked --all-features
+      - name: upload release artifacts
+        uses: actions/upload-artifact@v3
         with:
-          sarif_file: rust-clippy-results.sarif
-          wait-for-processing: true
-      - name: cargo build --verbose
-        run: cargo build --verbose
-      - name: cargo test --verbose
-        run: cargo test --verbose
+          name: artifacts
+          path: |
+            target/release
+            LICENSE
+            README.md
