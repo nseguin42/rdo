@@ -1,40 +1,16 @@
 name: Rust CI (main, build)
 
 on:
-  workflow_call:
-    secrets:
-      RELEASE_PAT:
-        description: 'Personal access token with repo scope'
-        required: true
+  push:
+    branches:
+      - main
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  startup:
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      paths_result: ${{ steps.skip_check.outputs.paths_result }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          skip_after_successful_duplicate: 'true'
-          do_not_skip: '["push"]'
-          paths_ignore: '[ "README.md", "LICENSE", ".gitignore", ".github/**", ".rustfmt.toml" ]'
-          paths_filter: |
-            build:
-              paths:
-                - Cargo.toml
-                - Cargo.lock
-                - src/**
-                - tests/**
-
   build:
-    needs: startup
-    if: needs.startup.outputs.should_skip != 'true' || !fromJSON(needs.startup.outputs.paths_result).build.should_skip
-    name: Build release artifacts - ${{ matrix.target }}
+    if: needs.check.outputs.should_skip != 'true' || !fromJSON(needs.check.outputs.paths_result).build.should_skip
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -42,24 +18,24 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             archive: tar.gz tar.xz tar.zst
-
     steps:
       - uses: actions/checkout@v3
       - name: Install Rust toolchain
         run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --locked
+        run: cargo build --release --locked
       - name: Package
         run: |
           mkdir -p release
-          for archive in ${{ matrix.archive }}; do
-            cmd="tar -cJf release/${{ matrix.target }}.${archive} -C target/${{ matrix.target }}/release/ ."
-            echo $cmd
-            $cmd
-          done
+          cmd="tar -cJf release/${{ matrix.target }}.${archive} -C target/release/ ."
+          echo $cmd
+          $cmd
       - name: Upload release artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.target }}
-          path: release/${{ matrix.target }}.*
+          name: artifacts
+          path: |
+            release/${{ matrix.target }}.*
+            LICENSE
+            README.md
