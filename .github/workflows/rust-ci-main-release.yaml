@@ -2,6 +2,15 @@ name: Rust CI (main, release)
 
 on:
   workflow_call:
+    inputs:
+      tag_name:
+        description: 'Tag name'
+        required: true
+        type: string
+    secrets:
+      RELEASE_PAT:
+        description: 'Personal access token with repo scope'
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -35,3 +44,4 @@ jobs:
             release/${{ matrix.target }}.tar.xz
             release/${{ matrix.target }}.tar.zst
           token: ${{ secrets.RELEASE_PAT }}
+          tag: ${{ inputs.tag_name }}
