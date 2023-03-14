@@ -10,7 +10,7 @@ license-file = "LICENSE"
 
 [dependencies]
 async-trait = "0.1.66"
-clap = { version = "4.1.6", features = ["derive", "wrap_help", "suggestions"] }
+clap = { version = "4.1.8", features = ["derive", "wrap_help", "suggestions"] }
 config = { version = "0.13.3", features = ["toml"] }
 log = { version = "0.4.17" }
 petgraph = { version = "0.6.3" }
