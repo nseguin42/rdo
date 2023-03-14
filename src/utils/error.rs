@@ -10,6 +10,7 @@ pub enum Error {
     StdoutClosed,
     StderrClosed,
     LoggingSetupFailed,
+    ConfigNotFound,
 }
 
 impl From<std::io::Error> for Error {
@@ -57,6 +58,7 @@ impl std::fmt::Display for Error {
             Error::StdinClosed => write!(f, "Stdin closed"),
             Error::StdoutClosed => write!(f, "Stdout closed"),
             Error::StderrClosed => write!(f, "Stderr closed"),
+            Error::ConfigNotFound => write!(f, "Config not found"),
         }
     }
 }

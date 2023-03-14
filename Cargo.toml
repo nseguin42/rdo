@@ -12,6 +12,7 @@ license-file = "LICENSE"
 async-trait = "0.1.64"
 clap = { version = "4.1.6", features = ["derive", "wrap_help", "suggestions"] }
 config = { version = "0.13.3", features = ["toml"] }
+home = "0.5.4"
 log = { version = "0.4.17" }
 petgraph = { version = "0.6.3" }
 pretty_env_logger = "0.4.0"

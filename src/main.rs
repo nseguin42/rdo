@@ -31,7 +31,7 @@ async fn main() {
     match result {
         Ok(_) => exit(0),
         Err(e) => {
-            error!("Error: {}", e);
+            error!("Error: {:?}", e);
             exit(1);
         }
     }
