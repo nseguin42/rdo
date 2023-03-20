@@ -9,7 +9,7 @@ repository = "https://github.com/nseguin42/rdo"
 license-file = "LICENSE"
 
 [dependencies]
-async-trait = "0.1.66"
+async-trait = "0.1.67"
 clap = { version = "4.1.8", features = ["derive", "wrap_help", "suggestions"] }
 config = { version = "0.13.3", features = ["toml"] }
 log = { version = "0.4.17" }
