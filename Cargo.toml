@@ -15,7 +15,7 @@ config = { version = "0.13.3", features = ["toml"] }
 log = { version = "0.4.17" }
 petgraph = { version = "0.6.3" }
 pretty_env_logger = "0.4.0"
-serde = { version = "1.0.159", features = ["derive"] }
+serde = { version = "1.0.160", features = ["derive"] }
 tokio = { version = "1.26.0", features = ["full", "sync"] }
 
 [dev-dependencies]
