@@ -14,7 +14,7 @@ clap = { version = "4.1.8", features = ["derive", "wrap_help", "suggestions"] }
 config = { version = "0.13.3", features = ["toml"] }
 log = { version = "0.4.17" }
 petgraph = { version = "0.6.3" }
-pretty_env_logger = "0.4.0"
+pretty_env_logger = "0.5.0"
 serde = { version = "1.0.159", features = ["derive"] }
 tokio = { version = "1.26.0", features = ["full", "sync"] }
 
