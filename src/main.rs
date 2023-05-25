@@ -1,6 +1,8 @@
+use std::collections::HashSet;
+use std::env::args;
 use std::process::exit;
 
-use clap::Parser;
+use clap::{command, Parser};
 use log::error;
 use tokio::spawn;
 use tokio::sync::mpsc::Sender as MpscSender;
@@ -43,13 +45,9 @@ async fn handle_command(
     args: Cli,
 ) -> Result<(), Error> {
     match args.command {
-        None => run(stdin_rx, stdout_tx, None, None).await,
+        None => run(stdin_rx, stdout_tx, args.scripts, args.global_opts.config).await,
         Some(command) => match command {
-            Commands::Run {
-                scripts,
-                config: config_path,
-                ..
-            } => run(stdin_rx, stdout_tx, scripts, config_path).await,
+            Commands::Run => run(stdin_rx, stdout_tx, args.scripts, args.global_opts.config).await,
             Commands::List {
                 config: config_path,
             } => list(config_path),
@@ -60,7 +58,7 @@ async fn handle_command(
 async fn run(
     stdin_rx: WatchReceiver<String>,
     stdout_tx: MpscSender<String>,
-    maybe_script_names: Option<String>,
+    maybe_script_names: Option<Vec<String>>,
     maybe_config_path: Option<String>,
 ) -> Result<(), Error> {
     let config = get_config_or_default(maybe_config_path)?;
@@ -72,7 +70,9 @@ async fn run(
     let sorted = match maybe_script_names {
         Some(script_names) => {
             let scripts_to_run = script_names
-                .split(',')
+                .into_iter()
+                .collect::<HashSet<String>>()
+                .iter()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>();
             resolver.resolve(scripts_to_run)?
