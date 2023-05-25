@@ -1,8 +1,8 @@
 use std::collections::HashSet;
-use std::env::args;
+
 use std::process::exit;
 
-use clap::{command, Parser};
+use clap::{Parser};
 use log::error;
 use tokio::spawn;
 use tokio::sync::mpsc::Sender as MpscSender;
