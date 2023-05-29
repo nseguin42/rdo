@@ -16,7 +16,7 @@ log = { version = "0.4.17" }
 petgraph = { version = "0.6.3" }
 pretty_env_logger = "0.4.0"
 serde = { version = "1.0.159", features = ["derive"] }
-tokio = { version = "1.26.0", features = ["full", "sync"] }
+tokio = { version = "1.28.2", features = ["full", "sync"] }
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "user-hooks", "run-cargo-fmt"] }
